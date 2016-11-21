@@ -2,3 +2,10 @@
 
 
 Works only in gdb
+
+
+NOP * 203 + shellcode (25 bytes) + mprotect_address * 10 + address of "pop pop pop ret" + encoded_aligned_page_address
++ encoded_mprotect_length + encoded_privileges_mprotect + address_of_shellcode
+
+
+The vuln1.c has a for loop which replaces 0x7f with 0x00
