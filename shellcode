@@ -3,6 +3,7 @@
 
 Works only in gdb
 
+Addresses are for my machine
 
 NOP * 203 + shellcode (25 bytes) + mprotect_address * 10 + address of "pop pop pop ret" + encoded_aligned_page_address
 + encoded_mprotect_length + encoded_privileges_mprotect + address_of_shellcode
