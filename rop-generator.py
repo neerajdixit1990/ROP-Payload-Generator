@@ -4,7 +4,7 @@ from elftools.elf.elffile import ELFFile
 
 # 128k flash for the ATXmega128a4u
 flashsize = 128 * 1024
-
+libc_base_add = 0xb7e05000 
 
 def __printSectionInfo (s):
     print ('[{nr}] {name} {type} {addr} {offs} {size}'.format(
@@ -90,19 +90,63 @@ def process_file(filename):
 	
 
     # find inc eax, ret
-    # inc eax; pop esi; ret present
-    found = False
-    for index in ret_index:
-        temp_index = index - 1
-        if 'inc' in instr_list[temp_index].mnemonic and 'eax' in instr_list[temp_index].op_str:
-            print 'Found inc eax,ret; at address 0x%x' %(instr_list[temp_index].address)
-            #print("0x%x:\t%s\t%s" %(instr_list[temp_index].address, instr_list[temp_index].mnemonic, instr_list[temp_index].op_str))
+    max_depth = 4
+    for depth in range(1,max_depth):
+        found = False
+        for index in ret_index:
+            temp_index = index - depth
+            
+            if not ('inc' in instr_list[temp_index].mnemonic and 'eax' in instr_list[temp_index].op_str):
+                continue
+            
+            temp_index = temp_index + 1
             found = True
+            while temp_index < index:
+                if instr_list[temp_index].mnemonic != 'pop':
+                    found = False
+                    break
+                temp_index = temp_index + 1
+
+            if found == True:
+                break
+
+        if found == True:
+            break
 
     if found == True:
-        print 'Found inc eax,ret; at address 0x%x' %(instr_list[temp_index].address)
+        print 'Found inc eax,ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
     else:
         print 'inc eax gadget not found !'
+
+
+    # find xor eax, eax, ret;
+    max_depth = 4
+    for depth in range(1,max_depth):
+        found = False
+        for index in ret_index:
+            temp_index = index - depth
+
+            if not ('xor' in instr_list[temp_index].mnemonic and 'eax, eax' in instr_list[temp_index].op_str):
+                continue
+
+            temp_index = temp_index + 1
+            found = True
+            while temp_index < index:
+                if instr_list[temp_index].mnemonic != 'pop':
+                    found = False
+                    break
+                temp_index = temp_index + 1
+
+            if found == True:
+                break
+
+        if found == True:
+            break
+
+    if found == True:
+        print 'Found xor eax, eax, ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+    else:
+        print 'xor eax, eax, ret; gadget not found !'
 	
 if __name__ == '__main__':
 	process_file('/lib/i386-linux-gnu/libc.so.6')
