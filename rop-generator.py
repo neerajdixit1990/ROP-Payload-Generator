@@ -47,7 +47,7 @@ def get_binary_instr(filename):
             instr_list.append(instr)
             if 'ret' in instr.mnemonic:
                 ret_index.append(count)
-                count = count + 1
+            count = count + 1
 	    
         '''print 'Found %d instructions with %d rets in binary %s' %(count, len(ret_index), filename)
 	
@@ -233,4 +233,38 @@ if __name__ == '__main__':
         print 'Found %d instructions with %d rets' %(len(entry[0]), len(entry[1]))
  
     pop_pop_ret_addr = None
+    for entry in lib_list:
+        instr = entry[0]
+        ret = entry[1]
+        
+        if instr == None or ret == None:
+            print 'Inconsistent data for libraries !'
+            exit(3)
+
+        result = find_2pop_ret(instr, ret)
+        if result != None:
+            pop_pop_ret_addr = result
+            break
+
+    if pop_pop_ret_addr == None:
+        print 'Unable to find gadget with 2 pops !'
+        exit(3)
+
     pop_pop_pop_ret_addr = None
+    for entry in lib_list:
+        instr = entry[0]
+        ret = entry[1]
+
+        if instr == None or ret == None:
+            print 'Inconsistent data for libraries !'
+            exit(4)
+
+        result = find_3pop_ret(instr, ret)
+        if result != None:
+            pop_pop_pop_ret_addr = result
+            break
+
+    if pop_pop_pop_ret_addr == None:
+        print 'Unable to find gadget with 3 pops !'
+        exit(4)
+
