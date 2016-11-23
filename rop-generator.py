@@ -2,7 +2,7 @@ from capstone import *
 from elftools.common.py3compat import bytes2str
 from elftools.elf.elffile import ELFFile
 import argparse
-
+import struct 
 # 128k flash for the ATXmega128a4u
 flashsize = 128 * 1024
 libc_base_add = 0xb7e05000 
@@ -17,6 +17,12 @@ def __printSectionInfo (s):
                 size = s.header['sh_size']
                                                               )
            )
+
+def check_null_bytes(address):
+    packed_addr = struct.pack("<I", address)
+    if '\x00' in packed_addr:
+        return True
+    return False
 
 def process_file(filename):
     with open(filename, 'rb') as f:
@@ -168,6 +174,8 @@ def process_file(filename):
                 break
 
             #check 0x00 in address
+            if check_null_bytes(instr_list[temp_index].address):
+                continue
 
             # add this to list of gadgets
             gadget_list.append(temp_index)
@@ -182,7 +190,8 @@ def process_file(filename):
                 break
             temp_index = temp_index + 1
 
-
+    #print 'address 0x489007 = %s' %(str(check_null_bytes(0x489007)))
+    
 if __name__ == '__main__':
 	#process_file('/lib/i386-linux-gnu/libc.so.6')
 	process_file('../Offensive-Security/hw3/vuln3')
