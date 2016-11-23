@@ -24,7 +24,7 @@ def check_null_bytes(address):
         return True
     return False
 
-def process_file(filename):
+def get_binary_instr(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
@@ -34,47 +34,54 @@ def process_file(filename):
         '''
         textSec = elffile.get_section_by_name(b'.text')
          
-	# the text section
+	    # the text section
         startAddr = textSec.header['sh_addr']
         val = textSec.data()
 
-	md = Cs(CS_ARCH_X86, CS_MODE_32)
-	md.detail = False 
-	ret_index = []
-	instr_list = []
-	count = 0
-	for instr in md.disasm(val, startAddr):
-		instr_list.append(instr)
-		if 'ret' in instr.mnemonic:
-			ret_index.append(count)
-		count = count + 1
-
-	print 'Found %d instructions with %d rets in binary %s' %(count, len(ret_index), filename)
+        md = Cs(CS_ARCH_X86, CS_MODE_32)
+        md.detail = False 
+        ret_index = []
+        instr_list = []
+        count = 0
+        for instr in md.disasm(val, startAddr):
+            instr_list.append(instr)
+            if 'ret' in instr.mnemonic:
+                ret_index.append(count)
+                count = count + 1
+	    
+        '''print 'Found %d instructions with %d rets in binary %s' %(count, len(ret_index), filename)
 	
-	'''for instr in range(len(instr_list)):
-		print("0x%x:\t%s\t%s" %(instr_list[instr].address, instr_list[instr].mnemonic, instr_list[instr].op_str))'''
+        for instr in range(len(instr_list)):
+            print("0x%x:\t%s\t%s" %(instr_list[instr].address, instr_list[instr].mnemonic, instr_list[instr].op_str))'''
+        return (instr_list, ret_index)
+    
+    return (None, None)
 
+def find_3pop_ret(instr_list, ret_index):
 	# find pop, pop, pop, ret
-	found = False
-	for index in ret_index:
-		temp_index = index - 1
-		while True:
-			if instr_list[temp_index].mnemonic == 'pop':
-				temp_index = temp_index - 1
-				if ((index - temp_index) == 3):
-					found = True
-					break
-			else:
-				break
+    found = False
+    for index in ret_index:
+        temp_index = index - 1
+        while True:
+            if instr_list[temp_index].mnemonic == 'pop':
+                temp_index = temp_index - 1
+                if ((index - temp_index) == 3):
+                    found = True
+                    break
+            else:
+                break
 
-		if found == True:
-			break
+        if found == True:
+            break
 		
-	if found == True:
-		print 'Found 3 pop ret at address 0x%x' %(instr_list[temp_index].address)
-	else:
-		print '3 pop gadget not found !'
+    if found == True:
+        print 'Found 3 pop ret at address 0x%x' %(instr_list[temp_index].address)
+        return instr_list[temp_index].address
+    else:
+        print '3 pop gadget not found !'
+        return None
 
+def find_2pop_ret(instr_list, ret_index):
     # find pop, pop, ret
     found = False
     for index in ret_index:
@@ -93,10 +100,12 @@ def process_file(filename):
 
     if found == True:
         print 'Found 2 pop ret at address 0x%x: %s' %(instr_list[temp_index].address, instr_list[temp_index].mnemonic)
+        return instr_list[temp_index].address
     else:
         print '2 pop gadget not found !'
+        return None
 	
-
+def find_inc_ret(instr_list, ret_index):
     # find inc eax, ret
     max_depth = 4
     for depth in range(1,max_depth):
@@ -123,10 +132,12 @@ def process_file(filename):
 
     if found == True:
         print 'Found inc eax,ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+        return (instr_list[temp_index].address-2)
     else:
         print 'inc eax gadget not found !'
+        return None
 
-
+def find_xor_ret(instr_list, ret_index):
     # find xor eax, eax, ret;
     max_depth = 4
     for depth in range(1,max_depth):
@@ -153,11 +164,13 @@ def process_file(filename):
 
     if found == True:
         print 'Found xor eax, eax, ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+        return (instr_list[temp_index].address-2)
     else:
         print 'xor eax, eax, ret; gadget not found !'
+        return None
 
+def print_all_gadgets(instr_list, ret_index):
     # find all gadgets
-    # find xor eax, eax, ret;
     gadget_list = []
     for index in ret_index:
         max_depth = 4
@@ -190,18 +203,34 @@ def process_file(filename):
                 break
             temp_index = temp_index + 1
 
-    #print 'address 0x489007 = %s' %(str(check_null_bytes(0x489007)))
-    
 if __name__ == '__main__':
 	#process_file('/lib/i386-linux-gnu/libc.so.6')
-	process_file('../Offensive-Security/hw3/vuln3')
+	#process_file('../Offensive-Security/hw3/vuln3')
 
-'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser('ROP-Chain-Compiler')
     parser.add_argument("vuln_bin", type=str, help="Path to 32 bit x86 binary which is to be exploited")
     parser.add_argument("-lib", type=str, help="Path to libraries which are linked along with base addresses")
     args = parser.parse_args()
-    print args.vuln_bin
+    
+    lib_list = []
     if args.lib:
-        print 'Optional libraries provided are %s' %(args.lib)
-'''
+        #print 'Optional libraries provided are %s' %(args.lib)
+        libraries = args.lib.split(' ')
+        for entry in libraries:
+            instr, ret = get_binary_instr(entry)
+            if instr == None or ret == None:
+                print '%s library not present !' %(entry)
+                exit(1)
+            lib_list.append((instr, ret))
+
+    instr, ret = get_binary_instr(args.vuln_bin)
+    if instr == None or ret == None:
+        print '%s binary not present !' %(args.vuln_bin)
+        exit(2)
+    lib_list.append((instr, ret))
+   
+    for entry in lib_list:
+        print 'Found %d instructions with %d rets' %(len(entry[0]), len(entry[1]))
+ 
+    pop_pop_ret_addr = None
+    pop_pop_pop_ret_addr = None
