@@ -112,7 +112,31 @@ def find_library_base_addr(vuln_binary, library_path):
     os.remove("./test.gdb")
     return library_base_addr
 
+def find_null_byte(filename, base_addr):
 
+    with open(filename, 'rb') as f:
+        # read binary file 
+        elffile = ELFFile(f)
+        ro_section = elffile.get_section_by_name(b'.rodata')
+
+        # the rodata section
+        startAddr = ro_section.header['sh_addr']
+        val = ro_section.data()
+        print 'Start address of .rodata = 0x%x' %(startAddr)
+       
+        found = False
+        for i in range(len(val)):
+            if val[i] == '\x00':
+                startAddr = startAddr + 1
+                found = True
+                break
+
+        if found == False:
+            return None
+        return (startAddr + base_addr)
+    return None
+ 
+'''
 def find_null_byte(vuln_bin, base_addr):
 
     cmd = "ldd "
@@ -129,7 +153,7 @@ def find_null_byte(vuln_bin, base_addr):
     
     null_byte_location = base_addr + bin_sh_offset + len("/bin/sh")
     return null_byte_location
-
+'''
 
 def find_buff_addr(vuln_bin):
 
@@ -387,7 +411,7 @@ if __name__ == '__main__':
             print 'Inconsistent entry in library structure !'
             exit(4)
 
-        result = find_null_byte(args.vuln_bin, 0xb7e05000)
+        result = find_null_byte(entry[3], entry[2])
         if result != None:
             null_byte = result 
             break
