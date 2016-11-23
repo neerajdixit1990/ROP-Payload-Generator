@@ -22,11 +22,12 @@ def process_file(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
+        '''
         for s in elffile.iter_sections():
             __printSectionInfo(s)
-        
+        '''
         textSec = elffile.get_section_by_name(b'.text')
-        
+         
 	# the text section
         startAddr = textSec.header['sh_addr']
         val = textSec.data()
@@ -148,10 +149,43 @@ def process_file(filename):
         print 'Found xor eax, eax, ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
     else:
         print 'xor eax, eax, ret; gadget not found !'
-	
+
+    # find all gadgets
+    # find xor eax, eax, ret;
+    gadget_list = []
+    for index in ret_index:
+        max_depth = 4
+        for depth in range(1,max_depth):
+
+            temp_index = index - depth
+
+            # check if this is jmp instruction
+            if instr_list[temp_index].mnemonic[0] == 'J' or instr_list[temp_index].mnemonic[0] == 'j':
+                break
+
+            # check if this is not call instruction
+            if instr_list[temp_index].mnemonic == 'call':
+                break
+
+            #check 0x00 in address
+
+            # add this to list of gadgets
+            gadget_list.append(temp_index)
+
+    print 'Found %d gadgets' %(len(gadget_list))
+    for instr in gadget_list:
+        temp_index = instr
+        while True:
+            print("0x%x:\t%s\t%s" %(instr_list[temp_index].address, instr_list[temp_index].mnemonic, instr_list[temp_index].op_str))
+            if instr_list[temp_index].mnemonic == 'ret':
+                print '------------'
+                break
+            temp_index = temp_index + 1
+
+
 if __name__ == '__main__':
-	process_file('/lib/i386-linux-gnu/libc.so.6')
-	#process_file('../Offensive-Security/hw3/vuln3')
+	#process_file('/lib/i386-linux-gnu/libc.so.6')
+	process_file('../Offensive-Security/hw3/vuln3')
 
 '''
     parser = argparse.ArgumentParser()
