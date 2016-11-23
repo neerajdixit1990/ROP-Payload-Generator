@@ -114,6 +114,7 @@ def find_library_base_addr(vuln_binary, library_path):
 
 def find_null_byte(filename, base_addr):
 
+    print 'finding null byte in %s with base addr 0x%x' %(filename, base_addr)
     with open(filename, 'rb') as f:
         # read binary file 
         elffile = ELFFile(f)
@@ -122,7 +123,6 @@ def find_null_byte(filename, base_addr):
         # the rodata section
         startAddr = ro_section.header['sh_addr']
         val = ro_section.data()
-        print 'Start address of .rodata = 0x%x' %(startAddr)
        
         found = False
         for i in range(len(val)):
@@ -405,19 +405,9 @@ if __name__ == '__main__':
     print 'strcpy address = 0x%x' %(strcpy_addr)
 
 
-    null_byte = None
-    for entry in lib_list:
-        if len(entry) != 4:
-            print 'Inconsistent entry in library structure !'
-            exit(4)
-
-        result = find_null_byte(entry[3], entry[2])
-        if result != None:
-            null_byte = result 
-            break
-
+    null_byte = find_null_byte(args.vuln_bin, 0)
     if null_byte == None:
-        print 'Unable to find gadget with 3 pops !'
+        print 'Unable to find NULL byte in binary %s' %(args.vuln_bin)
         exit(4)
     print 'NULL byte address = 0x%x' %(null_byte)
 
