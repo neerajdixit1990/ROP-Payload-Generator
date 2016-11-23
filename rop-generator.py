@@ -166,7 +166,12 @@ def find_buff_addr(vuln_bin):
     
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
-    buf_addr = int(proc.stdout.read(), 16) + 0x10 - 0x180
+    
+    # neeraj machine
+    buf_addr = int(proc.stdout.read(), 16) + 0x00 - 0x180
+
+    # krishnan machine
+    #buf_addr = int(proc.stdout.read(), 16) + 0x10 - 0x180
 
     os.remove("./find_buf.gdb")
     return buf_addr
