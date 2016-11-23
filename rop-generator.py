@@ -1,6 +1,7 @@
 from capstone import *
 from elftools.common.py3compat import bytes2str
 from elftools.elf.elffile import ELFFile
+import argparse
 
 # 128k flash for the ATXmega128a4u
 flashsize = 128 * 1024
@@ -151,3 +152,13 @@ def process_file(filename):
 if __name__ == '__main__':
 	process_file('/lib/i386-linux-gnu/libc.so.6')
 	#process_file('../Offensive-Security/hw3/vuln3')
+
+'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument("vuln_bin", type=str, help="Path to 32 bit x86 binary which is to be exploited")
+    parser.add_argument("-lib", type=str, help="Path to libraries which are linked along with base addresses")
+    args = parser.parse_args()
+    print args.vuln_bin
+    if args.lib:
+        print 'Optional libraries provided are %s' %(args.lib)
+'''
