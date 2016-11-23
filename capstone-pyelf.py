@@ -18,15 +18,12 @@ def __printSectionInfo (s):
            )
 
 def process_file(filename):
-    print('In file: ' + filename)
     with open(filename, 'rb') as f:
-        # get the data
+        # read fbinary file 
         elffile = ELFFile(f)
-        print ('sections:')
         for s in elffile.iter_sections():
             __printSectionInfo(s)
         
-	print ('get the code from the .text section')
         textSec = elffile.get_section_by_name(b'.text')
         
 	# the text section
@@ -34,9 +31,43 @@ def process_file(filename):
         val = textSec.data()
 
 	md = Cs(CS_ARCH_X86, CS_MODE_32)
-	md.detail = True
-	for i in md.disasm(val, startAddr):
-		print("0x%x:\t%s\t%s" %(i.address, i.mnemonic, i.op_str))
+	md.detail = False 
+	ret_index = []
+	instr_list = []
+	count = 0
+	for instr in md.disasm(val, startAddr):
+		instr_list.append(instr)
+		if 'ret' in instr.mnemonic:
+			ret_index.append(count)
+		count = count + 1
+
+	print 'Found %d instructions with %d rets in binary %s' %(count, len(ret_index), filename)
+	'''
+	for instr in ret_index:
+		print("0x%x:\t%s\t%s" %(instr_list[instr].address, instr_list[instr].mnemonic, instr_list[instr].op_str))
+	'''
+
+	# find pop, pop, pop, ret
+	found = False
+	for index in ret_index:
+		temp_index = index - 1
+		while True:
+			if instr_list[temp_index].mnemonic == 'pop':
+				temp_index = temp_index - 1
+				if ((index - temp_index) == 3):
+					found = True
+					break
+			else:
+				break
+
+		if found == True:
+			break
+		
+	if found == True:
+		print 'Found 3 pop ret at address 0x%x' %(instr_list[temp_index].address)
+	else:
+		print '3 pop gadget not found !'
+	
 	
 if __name__ == '__main__':
 	#process_file('/lib/i386-linux-gnu/libc.so.6')
