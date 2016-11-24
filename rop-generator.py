@@ -961,10 +961,9 @@ if __name__ == '__main__':
     if_use_gdb = False
 
     parser = argparse.ArgumentParser('ROP-Chain-Compiler')
-    #parser.add_argument("vuln_bin", type=str, help="Path to vulnerable binary (ROP tester)")
     vuln_bin = 'vuln' 
-    parser.add_argument("-lib", type=str, help="Libraries which are linked in vulnerable binary")
-    parser.add_argument("-p", action='store_true', help="Print all gadgets") 
+    parser.add_argument("-lib", type=str, help="Libraries to search for gadgets - default is libc")
+    parser.add_argument("-t", action='store_true', help="Use program as ROP tester") 
     args = parser.parse_args()
     
     lib_list = []
@@ -977,7 +976,7 @@ if __name__ == '__main__':
     compile_binary(libraries)
 
     for entry in libraries:
-        disas_map = get_binary_instr(entry, args.p)
+        disas_map = get_binary_instr(entry, not args.t)
         if disas_map == None:
             print '%s library not present !' %(entry)
             exit(1)
@@ -987,7 +986,10 @@ if __name__ == '__main__':
             print 'Unable to get base address for library %s' %(entry)
             exit(1)
         lib_list.append((disas_map, base_addr, entry))
-    
+
+    if not args.t:
+        exit(10)
+
     rop_payload = ""
 
     if args.lib is None:
@@ -1005,8 +1007,8 @@ if __name__ == '__main__':
     rm_command = "rm -rf ./vuln2 ./vuln2.c"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
     rmproc.wait()
-
+    
     print_rop_payload(rop_payload)
-
+    
     subprocess.call(["./vuln", rop_payload])
 
