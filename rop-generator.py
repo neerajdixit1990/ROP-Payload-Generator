@@ -42,10 +42,9 @@ def process_file(filename):
 		count = count + 1
 
 	print 'Found %d instructions with %d rets in binary %s' %(count, len(ret_index), filename)
-	'''
-	for instr in ret_index:
-		print("0x%x:\t%s\t%s" %(instr_list[instr].address, instr_list[instr].mnemonic, instr_list[instr].op_str))
-	'''
+	
+	'''for instr in range(len(instr_list)):
+		print("0x%x:\t%s\t%s" %(instr_list[instr].address, instr_list[instr].mnemonic, instr_list[instr].op_str))'''
 
 	# find pop, pop, pop, ret
 	found = False
@@ -67,8 +66,44 @@ def process_file(filename):
 		print 'Found 3 pop ret at address 0x%x' %(instr_list[temp_index].address)
 	else:
 		print '3 pop gadget not found !'
+
+    # find pop, pop, ret
+    found = False
+    for index in ret_index:
+        temp_index = index - 1
+        while True:
+            if instr_list[temp_index].mnemonic == 'pop':
+                temp_index = temp_index - 1
+                if ((index - temp_index) == 2):
+                    found = True
+                    break
+            else:
+                break
+
+        if found == True:
+            break
+
+    if found == True:
+        print 'Found 2 pop ret at address 0x%x: %s' %(instr_list[temp_index].address, instr_list[temp_index].mnemonic)
+    else:
+        print '2 pop gadget not found !'
 	
+
+    # find inc eax, ret
+    # inc eax; pop esi; ret present
+    found = False
+    for index in ret_index:
+        temp_index = index - 1
+        if 'inc' in instr_list[temp_index].mnemonic and 'eax' in instr_list[temp_index].op_str:
+            print 'Found inc eax,ret; at address 0x%x' %(instr_list[temp_index].address)
+            #print("0x%x:\t%s\t%s" %(instr_list[temp_index].address, instr_list[temp_index].mnemonic, instr_list[temp_index].op_str))
+            found = True
+
+    if found == True:
+        print 'Found inc eax,ret; at address 0x%x' %(instr_list[temp_index].address)
+    else:
+        print 'inc eax gadget not found !'
 	
 if __name__ == '__main__':
-	#process_file('/lib/i386-linux-gnu/libc.so.6')
-	process_file('../Offensive-Security/hw3/vuln3')
+	process_file('/lib/i386-linux-gnu/libc.so.6')
+	#process_file('../Offensive-Security/hw3/vuln3')
