@@ -300,6 +300,23 @@ def get_binary_instr(filename):
         return disassembled_map
     return None 
 
+def find_library_base_addr(vuln_binary, library_path):
+    with io.FileIO("test.gdb", "w") as file:
+        file.write("b main\nrun hello\ninfo proc mappings\n")
+
+    cmd = "gdb --batch --command=./test.gdb --args "
+    cmd = cmd + vuln_binary
+    cmd = cmd + " hello|grep " + os.path.realpath(library_path) + "|head -1|awk '{print $1}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    try:
+        library_base_addr = int(proc.stdout.read(), 16)
+    except Exception as e:
+        print "Error finding library base address %s" %(str(e))
+        return None
+
+    os.remove("./test.gdb")
+    return library_base_addr
 
 #/lib/ld-linux.so.2
 #mprotect-shellcode/vuln2
@@ -307,4 +324,35 @@ def get_binary_instr(filename):
 disas_map = get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
 rop_payload = build_rop_chain_libc(disas_map)
 print_rop_payload(rop_payload)
+
+
+#------------main program changes-----------------
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser('ROP-Chain-Compiler')
+    parser.add_argument("vuln_bin", type=str, help="Path to 32 bit x86 binary which is to be exploited")
+    parser.add_argument("-lib", type=str, help="Path to libraries which are linked along with base addresses")
+    args = parser.parse_args()
+    
+    lib_list = []
+    if args.lib:
+        #print 'Optional libraries provided are %s' %(args.lib)
+        libraries = args.lib.split(' ')
+        for entry in libraries:
+            disas_map = get_binary_instr(entry)
+            if disas_map == None:
+                print '%s library not present !' %(entry)
+                exit(1)
+
+            base_addr = find_library_base_addr(args.vuln_bin, entry)
+            if base_addr == None:
+                print 'Unable to get base address for library %s' %(entry)
+                exit(1)
+            lib_list.append((disas_map, base_addr, entry))
+
+    disas_map = get_binary_instr(args.vuln_bin)
+    if disas_map == None:
+        print '%s binary not present !' %(args.vuln_bin)
+        exit(2)
+    lib_list.append((disas_map, 0, args.vuln_bin))
 
