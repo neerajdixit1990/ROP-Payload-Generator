@@ -94,19 +94,23 @@ def find_strcpy_addr(vuln_binary):
     return strcpy_addr 
 
 
-def find_libc_addr(vuln_binary):
+def find_library_base_addr(vuln_binary, library_path):
     with io.FileIO("test.gdb", "w") as file:
         file.write("b main\nrun hello\ninfo proc mappings\n")
 
     cmd = "gdb --batch --command=./test.gdb --args "
     cmd = cmd + vuln_binary
-    cmd = cmd + " hello|grep libc|grep so|head -1|awk '{print $1}'"
+    cmd = cmd + " hello|grep " + library_path + "|head -1|awk '{print $1}'"
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
-    libc_base_addr = int(proc.stdout.read(), 16)
+    try:
+        library_base_addr = int(proc.stdout.read(), 16)
+    except:
+    	print "Error finding library base address"
+        return None
 
     os.remove("./test.gdb")
-    return libc_base_addr
+    return library_base_addr
 
 
 def find_null_byte(vuln_bin, libc_base_addr):
