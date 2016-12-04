@@ -15,7 +15,6 @@ def find_gadgets(sectionData, startAddr):
     idx = 0
     splitList = []
     for item in tmpList:
-        print repr(item)
         if item != "":
             splitList.append(item)
 
