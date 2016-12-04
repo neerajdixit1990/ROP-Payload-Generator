@@ -25,16 +25,18 @@ def find_gadgets(sectionData, startAddr):
     valOffset = 0
     for val in splitList:
         i = 0
-        while i < len(val):
-            gadget_map[startAddr + valOffset + i] = val[i:len(val)]
+        val_length = len(val)
+        while i < val_length:
+            gadget_map[startAddr + valOffset + i] = val[i:val_length]
             i += 1
-        valOffset += len(val)
+        valOffset += val_length
 
     for gadget_addr in gadget_map:
         if gadget_map[gadget_addr] not in unique_gadget_map.values():
             md = Cs(CS_ARCH_X86, CS_MODE_32)
             md.detail = False
             endWithRet = False
+            discardGadget = False
             gadget = gadget_map[gadget_addr]
             instr_list = md.disasm(gadget, gadget_addr)
             n_bytes = len(gadget)
@@ -47,7 +49,13 @@ def find_gadgets(sectionData, startAddr):
                 byte_count += instr.size
                 if (instr.mnemonic == "ret") and (instr.op_str == "") and (byte_count == n_bytes):
                     endWithRet = True
-            if (n_bytes == byte_count) and (n_bytes > 1) and (endWithRet is True):
+                if (instr.mnemonic == "call") or (instr.mnemonic == "leave") or (instr.mnemonic[0] == 'j'):
+                    discardGadget = True
+                    break
+                if (instr.mnemonic == "ret") and (instr.op_str != ""):
+                    discardGadget = True
+                    break
+            if (discardGadget is False) and (n_bytes == byte_count) and (n_bytes > 1) and (endWithRet is True):
                 unique_gadget_map[gadget_addr] = gadget_map[gadget_addr]
 
 
@@ -85,6 +93,12 @@ def get_binary_instr(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
+        '''
+        textSec = elffile.get_section_by_name(b'.text')
+        textStartAddr = textSec.header['sh_addr']
+        textSection = textSec.data()
+        find_gadgets(textSection, textStartAddr)
+        '''
 
         initSec = elffile.get_section_by_name(b'.init')
         initStartAddr = initSec.header['sh_addr']
