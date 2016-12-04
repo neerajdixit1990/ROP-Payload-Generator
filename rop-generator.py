@@ -47,7 +47,7 @@ def get_binary_instr(filename):
         ret_index = []
         instr_list = []
         count = 0
-        for instr in md.disasm(val[3:], startAddr + 3):
+        for instr in md.disasm(val, startAddr):
             instr_list.append(instr)
             if 'ret' in instr.mnemonic:
                 ret_index.append(count)
@@ -253,6 +253,72 @@ def find_inc_ret(instr_list, ret_index):
         print 'inc eax gadget not found !'
         return None
 
+def find_eax_esp_ret(instr_list, ret_index):
+    # find inc eax, ret
+    max_depth = 4
+    for depth in range(1,max_depth):
+        found = False
+        for index in ret_index:
+            temp_index = index - depth
+
+            if not ('mov' in instr_list[temp_index].mnemonic and '[esp' in instr_list[temp_index].op_str):
+                continue
+
+            temp_index = temp_index + 1
+            found = True
+            while temp_index < index:
+                if 'call' in instr_list[temp_index].mnemonic or instr_list[temp_index].mnemonic[0] == 'j':
+                    found = False
+                    break
+                temp_index = temp_index + 1
+
+            if found == True:
+                print 'Found mov [esp ,ret; at address 0x%x with depth = %d' %(instr_list[index-depth].address,depth)
+                break
+
+        #if found == True:
+        #    break
+
+    if found == True:
+        print 'Found mov [esp,ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+        return (instr_list[temp_index].address-2)
+    else:
+        print 'mov [esp gadget not found !'
+        return None
+
+def find_add_esp_ret(instr_list, ret_index):
+    # find inc eax, ret
+    max_depth = 4
+    for depth in range(1,max_depth):
+        found = False
+        for index in ret_index:
+            temp_index = index - depth
+
+            if not ('add' in instr_list[temp_index].mnemonic and 'esp' in instr_list[temp_index].op_str):
+                continue
+
+            temp_index = temp_index + 1
+            found = True
+            while temp_index < index:
+                if 'call' in instr_list[temp_index].mnemonic or instr_list[temp_index].mnemonic[0] == 'j':
+                    found = False
+                    break
+                temp_index = temp_index + 1
+
+            if found == True:
+                print 'Found add esp ,ret; at address 0x%x with depth = %d' %(instr_list[index-depth].address,depth)
+                break
+
+        #if found == True:
+        #    break
+
+    if found == True:
+        print 'Found add esp,ret; at address 0x%x with depth = %d' %(instr_list[temp_index].address-2,depth)
+        return (instr_list[temp_index].address-2)
+    else:
+        print 'add esp gadget not found !'
+        return None
+
 def find_dec_ret(instr_list, ret_index):
     # find dec eax, ret
     max_depth = 4
@@ -264,7 +330,6 @@ def find_dec_ret(instr_list, ret_index):
             if not ('dec' in instr_list[temp_index].mnemonic and 'eax' in instr_list[temp_index].op_str):
                 continue
 
-            print 'atleast here !'
             temp_index = temp_index + 1
             found = True
             while temp_index < index:
@@ -398,7 +463,7 @@ if __name__ == '__main__':
             print 'Inconsistent data for libraries !'
             exit(3)
 
-        result = find_dec_ret(instr, ret)
+        result = find_add_esp_ret(instr, ret)
         if result != None:
             test = result + entry[2]
             print 'Found gadget at address 0x%x' %(test)
