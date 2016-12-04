@@ -61,12 +61,12 @@ def find_gadgets(sectionData, startAddr):
                 unique_gadget_map[gadget_addr] = gadget_map[gadget_addr]
 
 
-def print_gadgets():
+def print_gadgets(gadgetMap):
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = False 
 
-    for gadget_addr in gadget_map:
-        gadget = gadget_map[gadget_addr]
+    for gadget_addr in gadgetMap:
+        gadget = gadgetMap[gadget_addr]
         instr_list = md.disasm(gadget, gadget_addr)
         out_str = format(gadget_addr, '#010x') + " : "
         for instr in instr_list:
@@ -76,20 +76,6 @@ def print_gadgets():
             out_str += " ; "
         print out_str
 
-def print_unique_gadgets():
-    md = Cs(CS_ARCH_X86, CS_MODE_32)
-    md.detail = False
-
-    for gadget_addr in unique_gadget_map:
-        gadget = unique_gadget_map[gadget_addr]
-        instr_list = md.disasm(gadget, gadget_addr)
-        out_str = format(gadget_addr, '#010x') + " : "
-        for instr in instr_list:
-            out_str += instr.mnemonic
-            if instr.op_str != "":
-                out_str += " " + instr.op_str
-            out_str += " ; "
-        print out_str
 
 def get_binary_instr(filename):
     with open(filename, 'rb') as f:
@@ -122,9 +108,8 @@ def get_binary_instr(filename):
         finiSection = finiSec.data()
         find_gadgets(finiSection, finiStartAddr)
         '''
-    #print_gadgets()
-    #print str(len(gadget_map)) + " gadgets found." 
-    print_unique_gadgets()
+
+    print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
-get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
+get_binary_instr("mprotect-shellcode/vuln2")
