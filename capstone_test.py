@@ -26,6 +26,8 @@ def find_gadgets(sectionData, startAddr):
     for val in splitList:
         i = 0
         val_length = len(val)
+        if val_length > 10:
+            i = val_length - 10
         while i < val_length:
             gadget_map[startAddr + valOffset + i] = val[i:val_length]
             i += 1
@@ -93,13 +95,13 @@ def get_binary_instr(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
-        '''
+
         textSec = elffile.get_section_by_name(b'.text')
         textStartAddr = textSec.header['sh_addr']
         textSection = textSec.data()
         find_gadgets(textSection, textStartAddr)
-        '''
 
+        '''
         initSec = elffile.get_section_by_name(b'.init')
         initStartAddr = initSec.header['sh_addr']
         initSection = initSec.data()
@@ -119,10 +121,10 @@ def get_binary_instr(filename):
         finiStartAddr = finiSec.header['sh_addr']
         finiSection = finiSec.data()
         find_gadgets(finiSection, finiStartAddr)
-
+        '''
     #print_gadgets()
     #print str(len(gadget_map)) + " gadgets found." 
     print_unique_gadgets()
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
-get_binary_instr("./vuln1")
+get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
