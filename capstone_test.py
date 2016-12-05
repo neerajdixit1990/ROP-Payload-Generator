@@ -10,16 +10,17 @@ import io
 gadget_map = {}
 unique_gadget_map = {}
 disassembled_map = {}
+register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
+
 
 def find_gadgets(sectionData, startAddr):
-    tmpList = sectionData.split("\xc3")
+    retCount = sectionData.count("\xc3")
+    if retCount == 0:
+        return
+    splitList = sectionData.split("\xc3")
     idx = 0
-    splitList = []
-    for item in tmpList:
-        if item != "":
-            splitList.append(item)
 
-    while idx < len(splitList): 
+    while idx < len(splitList) - 1: 
         splitList[idx] += "\xc3"
         idx += 1
 
@@ -111,42 +112,63 @@ def find_pop_ret(gadgetMap, count, restricted_reg_list):
 
     return 0
 
+def find_xor_zero(gadgetMap, restricted_reg_list):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        xorFound = False
+        for instr in instr_list:
+            if (instr.mnemonic != "xor") and (instr.mnemonic != "ret"):
+                break
+            if is_forbidden_register(instr.op_str, restricted_reg_list) is True:
+                break
+            if (instr.mnemonic == "xor"):
+                for reg in register_list:
+                    if instr.op_str.count(reg) == 2:
+                        xorFound = True
+            if instr.mnemonic == "ret" and xorFound is True:
+                    return gadget_addr
+
+    return 0
+
 def get_binary_instr(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
         elffile = ELFFile(f)
 
-        textSec = elffile.get_section_by_name(b'.text')
-        textStartAddr = textSec.header['sh_addr']
-        textSection = textSec.data()
-        find_gadgets(textSection, textStartAddr)
+        if filename.count(".so") == 1:
+            textSec = elffile.get_section_by_name(b'.text')
+            textStartAddr = textSec.header['sh_addr']
+            textSection = textSec.data()
+            find_gadgets(textSection, textStartAddr)
 
-        '''
-        initSec = elffile.get_section_by_name(b'.init')
-        initStartAddr = initSec.header['sh_addr']
-        initSection = initSec.data()
-        find_gadgets(initSection, initStartAddr)
+        else:
+            initSec = elffile.get_section_by_name(b'.init')
+            initStartAddr = initSec.header['sh_addr']
+            initSection = initSec.data()
+            find_gadgets(initSection, initStartAddr)
 
-        pltSec = elffile.get_section_by_name(b'.plt')
-        pltStartAddr = pltSec.header['sh_addr']
-        pltSection = pltSec.data()
-        find_gadgets(pltSection, pltStartAddr)
+            pltSec = elffile.get_section_by_name(b'.plt')
+            pltStartAddr = pltSec.header['sh_addr']
+            pltSection = pltSec.data()
+            find_gadgets(pltSection, pltStartAddr)
 
-        textSec = elffile.get_section_by_name(b'.text')
-        textStartAddr = textSec.header['sh_addr']
-        textSection = textSec.data()
-        find_gadgets(textSection, textStartAddr)
+            textSec = elffile.get_section_by_name(b'.text')
+            textStartAddr = textSec.header['sh_addr']
+            textSection = textSec.data()
+            find_gadgets(textSection, textStartAddr)
 
-        finiSec = elffile.get_section_by_name(b'.fini')
-        finiStartAddr = finiSec.header['sh_addr']
-        finiSection = finiSec.data()
-        find_gadgets(finiSection, finiStartAddr)
-        '''
+            finiSec = elffile.get_section_by_name(b'.fini')
+            finiStartAddr = finiSec.header['sh_addr']
+            finiSection = finiSec.data()
+            find_gadgets(finiSection, finiStartAddr)
 
     build_disassembled_gadgets_map(unique_gadget_map)
     print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
     print hex(find_pop_ret(disassembled_map, 3, []))
-
-get_binary_instr("mprotect-shellcode/vuln2")
+    print hex(find_xor_zero(disassembled_map, []))
+#/lib/ld-linux.so.2
+#mprotect-shellcode/vuln2
+#/lib/i386-linux-gnu/libc.so.6
+get_binary_instr("/lib/i386-linux-gnu/libc.so.6")
