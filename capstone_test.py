@@ -9,6 +9,7 @@ import io
 
 gadget_map = {}
 unique_gadget_map = {}
+disassembled_map = {}
 
 def find_gadgets(sectionData, startAddr):
     tmpList = sectionData.split("\xc3")
@@ -61,6 +62,15 @@ def find_gadgets(sectionData, startAddr):
                 unique_gadget_map[gadget_addr] = gadget_map[gadget_addr]
 
 
+def build_disassembled_gadgets_map(gadgetMap):
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = False 
+
+    for gadget_addr in gadgetMap:
+        gadget = gadgetMap[gadget_addr]
+        instr_list = md.disasm(gadget, gadget_addr)
+        disassembled_map[gadget_addr] = instr_list
+
 def print_gadgets(gadgetMap):
     md = Cs(CS_ARCH_X86, CS_MODE_32)
     md.detail = False 
@@ -76,6 +86,22 @@ def print_gadgets(gadgetMap):
             out_str += " ; "
         print out_str
 
+
+def find_pop_ret(gadgetMap, count):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        pop_count = 0
+        for instr in instr_list:
+            if (instr.mnemonic != "pop") and (instr.mnemonic != "ret"):
+                break
+            if instr.mnemonic == "pop":
+                pop_count += 1
+            if instr.mnemonic == "ret":
+                if pop_count == count:
+                    return gadget_addr
+                break
+
+    return 0
 
 def get_binary_instr(filename):
     with open(filename, 'rb') as f:
@@ -109,7 +135,10 @@ def get_binary_instr(filename):
         find_gadgets(finiSection, finiStartAddr)
         '''
 
+    build_disassembled_gadgets_map(unique_gadget_map)
     print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
+
+    print hex(find_pop_ret(disassembled_map, 3))
 
 get_binary_instr("mprotect-shellcode/vuln2")
