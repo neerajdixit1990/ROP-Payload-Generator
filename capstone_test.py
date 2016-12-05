@@ -87,12 +87,20 @@ def print_gadgets(gadgetMap):
         print out_str
 
 
-def find_pop_ret(gadgetMap, count):
+def is_forbidden_register(op_str, restricted_reg_list):
+    for reg in restricted_reg_list:
+        if op_str.count(reg) > 0:
+            return True
+    return False
+
+def find_pop_ret(gadgetMap, count, restricted_reg_list):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
         pop_count = 0
         for instr in instr_list:
             if (instr.mnemonic != "pop") and (instr.mnemonic != "ret"):
+                break
+            if is_forbidden_register(instr.op_str, restricted_reg_list) is True:
                 break
             if instr.mnemonic == "pop":
                 pop_count += 1
@@ -139,6 +147,6 @@ def get_binary_instr(filename):
     print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
-    print hex(find_pop_ret(disassembled_map, 3))
+    print hex(find_pop_ret(disassembled_map, 3, []))
 
 get_binary_instr("mprotect-shellcode/vuln2")
