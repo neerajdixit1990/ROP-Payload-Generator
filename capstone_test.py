@@ -176,7 +176,7 @@ def get_binary_instr(filename):
             find_gadgets(finiSection, finiStartAddr)
 
     build_disassembled_gadgets_map(unique_gadget_map)
-    #print_gadgets(unique_gadget_map)
+    print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
     print "pop pop pop ret found at " + hex(find_pop_ret(disassembled_map, 3, []))
