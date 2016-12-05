@@ -11,7 +11,8 @@ gadget_map = {}
 unique_gadget_map = {}
 disassembled_map = {}
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
-
+strcpy_offset = 0
+mprotect_offset = 0
 
 def find_gadgets(sectionData, startAddr):
     retCount = sectionData.count("\xc3")
@@ -130,6 +131,17 @@ def find_xor_zero(gadgetMap, forbidden_reg_list, allowed_reg_list):
 
     return 0
 
+def get_function_address(elffile, symname):
+    dynsymtab = elffile.get_section_by_name(b'.dynsym')
+    dynSymTable = elffile._make_section(dynsymtab.header)
+
+    for sym in dynSymTable.iter_symbols():
+        if sym.name == symname:
+            return sym.entry['st_value']
+
+    return 0
+
+
 def get_binary_instr(filename):
     with open(filename, 'rb') as f:
         # read fbinary file 
@@ -140,7 +152,8 @@ def get_binary_instr(filename):
             textStartAddr = textSec.header['sh_addr']
             textSection = textSec.data()
             find_gadgets(textSection, textStartAddr)
-
+            mprotect_offset = get_function_address(elffile, "mprotect")
+            strcpy_offset = get_function_address(elffile, "strcpy")
         else:
             initSec = elffile.get_section_by_name(b'.init')
             initStartAddr = initSec.header['sh_addr']
@@ -163,11 +176,13 @@ def get_binary_instr(filename):
             find_gadgets(finiSection, finiStartAddr)
 
     build_disassembled_gadgets_map(unique_gadget_map)
-    print_gadgets(unique_gadget_map)
+    #print_gadgets(unique_gadget_map)
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
-    print hex(find_pop_ret(disassembled_map, 3, []))
-    print hex(find_xor_zero(disassembled_map, ["eax"], register_list))
+    print "pop pop pop ret found at " + hex(find_pop_ret(disassembled_map, 3, []))
+    print "xor zero found at " + hex(find_xor_zero(disassembled_map, [], register_list))
+    print "mprotect found at " + hex(mprotect_offset)
+    print "strcpy found at " + hex(strcpy_offset)
 #/lib/ld-linux.so.2
 #mprotect-shellcode/vuln2
 #/lib/i386-linux-gnu/libc.so.6
