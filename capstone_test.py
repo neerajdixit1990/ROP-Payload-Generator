@@ -88,20 +88,20 @@ def print_gadgets(gadgetMap):
         print out_str
 
 
-def is_forbidden_register(op_str, restricted_reg_list):
-    for reg in restricted_reg_list:
+def is_forbidden_register(op_str, forbidden_reg_list):
+    for reg in forbidden_reg_list:
         if op_str.count(reg) > 0:
             return True
     return False
 
-def find_pop_ret(gadgetMap, count, restricted_reg_list):
+def find_pop_ret(gadgetMap, count, forbidden_reg_list):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
         pop_count = 0
         for instr in instr_list:
             if (instr.mnemonic != "pop") and (instr.mnemonic != "ret"):
                 break
-            if is_forbidden_register(instr.op_str, restricted_reg_list) is True:
+            if is_forbidden_register(instr.op_str, forbidden_reg_list) is True:
                 break
             if instr.mnemonic == "pop":
                 pop_count += 1
@@ -112,17 +112,17 @@ def find_pop_ret(gadgetMap, count, restricted_reg_list):
 
     return 0
 
-def find_xor_zero(gadgetMap, restricted_reg_list):
+def find_xor_zero(gadgetMap, forbidden_reg_list, allowed_reg_list):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
         xorFound = False
         for instr in instr_list:
             if (instr.mnemonic != "xor") and (instr.mnemonic != "ret"):
                 break
-            if is_forbidden_register(instr.op_str, restricted_reg_list) is True:
+            if is_forbidden_register(instr.op_str, forbidden_reg_list) is True:
                 break
             if (instr.mnemonic == "xor"):
-                for reg in register_list:
+                for reg in allowed_reg_list:
                     if instr.op_str.count(reg) == 2:
                         xorFound = True
             if instr.mnemonic == "ret" and xorFound is True:
@@ -167,7 +167,7 @@ def get_binary_instr(filename):
     print str(len(unique_gadget_map)) + " unique gadgets found." 
 
     print hex(find_pop_ret(disassembled_map, 3, []))
-    print hex(find_xor_zero(disassembled_map, []))
+    print hex(find_xor_zero(disassembled_map, ["eax"], register_list))
 #/lib/ld-linux.so.2
 #mprotect-shellcode/vuln2
 #/lib/i386-linux-gnu/libc.so.6
