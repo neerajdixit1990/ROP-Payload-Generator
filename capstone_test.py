@@ -52,7 +52,10 @@ def find_gadgets(sectionData, startAddr):
                 byte_count += instr.size
                 if (instr.mnemonic == "ret") and (instr.op_str == "") and (byte_count == n_bytes):
                     endWithRet = True
-                if (instr.mnemonic == "call") or (instr.mnemonic == "leave") or (instr.mnemonic[0] == 'j'):
+                if (instr.mnemonic == "leave") or (instr.mnemonic[0] == 'j'):
+                    discardGadget = True
+                    break
+                if (instr.mnemonic == "call") and (instr.op_str != "dword ptr gs:[0x10]"):
                     discardGadget = True
                     break
                 if (instr.mnemonic == "ret") and (instr.op_str != ""):
@@ -103,6 +106,53 @@ def find_pop3_ret(gadgetMap):
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
         if mnemonic_list == ["pop", "pop", "pop", "ret"]:
+            return gadget_addr
+    return 0
+
+def find_xor_eax_eax(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        mnemonic_list = []
+        for instr in instr_list:
+            mnemonic_list.append(instr.mnemonic)
+            op_list.append(instr.op_str)
+        if mnemonic_list == ["xor", "ret"] and op_list.count("eax") == 2:
+            return gadget_addr
+    return 0
+
+def find_inc_eax(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        mnemonic_list = []
+        for instr in instr_list:
+            mnemonic_list.append(instr.mnemonic)
+            op_list.append(instr.op_str)
+        if mnemonic_list == ["inc", "ret"] and op_list.count("eax") == 1:
+            return gadget_addr
+    return 0
+
+def find_dec_eax(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        mnemonic_list = []
+        for instr in instr_list:
+            mnemonic_list.append(instr.mnemonic)
+            op_list.append(instr.op_str)
+        if mnemonic_list == ["dec", "ret"] and op_list.count("eax") == 1:
+            return gadget_addr
+    return 0
+
+def find_syscall(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        mnemonic_list = []
+        op_list = []
+        for instr in instr_list:
+            mnemonic_list.append(instr.mnemonic)
+            op_list.append(instr.op_str)
+        if mnemonic_list == ["int", "ret"] and op_list.count("0x80") == 1:
+            return gadget_addr
+        if mnemonic_list == ["call", "ret"] and op_list.count("dword ptr gs:[0x10]") == 1:
             return gadget_addr
     return 0
 
