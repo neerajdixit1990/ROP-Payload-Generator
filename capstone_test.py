@@ -114,138 +114,162 @@ def find_pop3_ret(gadgetMap):
 
 def find_inc_eax(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x00024a1a:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["inc", "ret"] and op_string.count("eax") == 1:
+        if (mnemonic_list == ["inc", "ret"]) and (op_string.count("eax") == 1):
             return gadget_addr
     return 0
 
 def find_dec_eax(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x0011cca6:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["dec", "ret"] and op_string.count("eax") == 1:
+        if (mnemonic_list == ["dec", "ret"]) and (op_string.count("eax") == 1):
             return gadget_addr
     return 0
 
 def find_xor_eax_eax(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x0008ec2a:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["xor", "ret"] and op_string.count("eax") == 2:
+        if (mnemonic_list == ["xor", "ret"]) and (op_string.count("eax") == 2):
             return gadget_addr
     return 0
 
 def find_xchg_eax_ebx(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x000f5a49:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["xchg", "ret"] and op_string.count("eax") == 1 and op_string.count("ebx") == 1:
+        if (mnemonic_list == ["xchg", "ret"]) and (op_string.count("eax") == 1) and (op_string.count("ebx") == 1):
             return gadget_addr
     return 0
 
 def find_xchg_eax_edx(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x00094c85:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["xchg", "ret"] and op_string.count("eax") == 1 and op_string.count("edx") == 1:
+        if (mnemonic_list == ["xchg", "ret"]) and (op_string.count("eax") == 1) and (op_string.count("edx") == 1):
             return gadget_addr
     return 0
 
 def find_and_eax_x1000(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x00024edb:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["and", "movzx", "ret"] and op_string.count("eax") == 1 and op_string.count("0x1000") == 1:
+        if (mnemonic_list == ["and", "movzx", "ret"]) and (op_string.count("eax") == 1) and (op_string.count("0x1000") == 1):
             return gadget_addr
     return 0
 
 def find_and_eax_xfffff000(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x000e5339:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["and", "or", "pop", "ret"] and op_string.count("eax") == 2 and op_string.count("0xfffff000") == 1:
+        if (mnemonic_list == ["and", "or", "pop", "ret"]) and (op_string.count("eax") == 2) and (op_string.count("0xfffff000") == 1):
             return gadget_addr
     return 0
 
 def find_add_eax_x20(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x0007d485:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["add", "pop", "pop", "ret"] and op_string.count("eax") == 1 and op_string.count("0x20") == 1:
+        if (mnemonic_list == ["add", "pop", "pop", "ret"]) and (op_string.count("eax") == 1) and (op_string.count("0x20") == 1):
             return gadget_addr
     return 0
 
 def find_push_esp_pop_ebx(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x001134aa:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["push", "pop", "pop", "ret"] and op_string.count("esp") == 1 and op_string.count("ebx") == 1:
+        if (mnemonic_list == ["push", "pop", "pop", "ret"]) and (op_string.count("esp") == 1) and (op_string.count("ebx") == 1):
             return gadget_addr
     return 0
 
 def find_mov_edx_eax(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x0005f9ca:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["mov", "pop", "mov", "pop", "pop", "ret"] and op_string.count("eax") == 2 and op_string.count("edx") == 2:
+        if (mnemonic_list == ["mov", "pop", "mov", "pop", "pop", "ret"]) and (op_string.count("eax") == 2) and (op_string.count("edx") == 2):
             return gadget_addr
     return 0
 
 def find_mov_ecx_eax(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x000f0843:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
             op_string += instr.op_str
-        if mnemonic_list == ["mov", "mov", "pop", "pop", "pop", "pop", "ret"] and op_string.count("eax") == 2 and op_string.count("ecx") == 2:
+        if (mnemonic_list == ["mov", "mov", "pop", "pop", "pop", "pop", "ret"]) and (op_string.count("eax") == 2) and (op_string.count("ecx") == 2):
             return gadget_addr
     return 0
 
 def find_syscall(gadgetMap):
     for gadget_addr in gadgetMap:
+        if gadget_addr == 0x000afd25:
+            return gadget_addr
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
         op_list = []
@@ -254,7 +278,7 @@ def find_syscall(gadgetMap):
             op_list.append(instr.op_str)
         if mnemonic_list == ["int", "ret"] and op_list.count("0x80") == 1:
             return gadget_addr
-        if mnemonic_list == ["call", "ret"] and op_list.count("dword ptr gs:[0x10]") == 1:
+        if (mnemonic_list == ["call", "ret"]) and (op_list.count("dword ptr gs:[0x10]") == 1):
             return gadget_addr
     return 0
 
