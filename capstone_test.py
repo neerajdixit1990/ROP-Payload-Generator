@@ -75,7 +75,7 @@ def build_disassembled_gadgets_map(gadgetMap):
         gadget = gadgetMap[gadget_addr]
         instr_list = md.disasm(gadget, gadget_addr)
         instruction_list = []
-        for instr in inst_list:
+        for instr in instr_list:
             instruction_list.append(instr)
         disassembled_map[gadget_addr] = instruction_list
     return disassembled_map
