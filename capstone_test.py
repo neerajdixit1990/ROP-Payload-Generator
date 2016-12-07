@@ -460,7 +460,7 @@ def gfind_mov_eax_esi(gadgetMap):
             return gadget_addr
         if ilist == [["xchg", "esi, eax"], ["ret"]]:
             return gadget_addr
-    print "gfind_double_esi - 0"
+    print "gfind_mov_eax_esi - 0"
     return 0
 
 def gfind_mov_ecx_eax(gadgetMap):
@@ -480,7 +480,7 @@ def gfind_mov_ecx_eax(gadgetMap):
             return gadget_addr
         if ilist == [["xchg", "ecx, eax"], ["and", "al, 0x5b"], ["ret"]]:
             return gadget_addr
-    print "gfind_double_esi - 0"
+    print "gfind_mov_ecx_eax - 0"
     return 0
 
 def gfind_syscall(gadgetMap):
@@ -494,7 +494,7 @@ def gfind_syscall(gadgetMap):
             return gadget_addr
         if ilist == [["call", "dword ptr gs:[0x10]"], ["ret"]]:
             return gadget_addr
-    print "gfind_double_esi - 0"
+    print "gfind_syscall - 0"
     return 0
 
 def build_rop_chain_syscall_generic(lib_list):
@@ -587,11 +587,6 @@ def build_rop_chain_syscall_generic(lib_list):
 
     #syscall
     gadget11 = find_gadget_addr(lib_list, gfind_syscall)
-    for entry in lib_list:
-        gadget11 = gfind_syscall(entry)
-        if gadget11 != 0:
-            gadget11 += entry[1]
-            break
 
     generic_gadget_list.append(gadget11)
 
@@ -838,5 +833,6 @@ if __name__ == '__main__':
         lib_list.append((disas_map, base_addr, entry))
     
     #build_rop_chain_libc_syscalls(lib_list)
-    build_rop_chain_libc(lib_list)
+    #build_rop_chain_libc(lib_list)
+    build_rop_chain_syscall_generic(lib_list)
     
