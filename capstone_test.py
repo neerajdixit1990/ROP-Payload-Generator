@@ -879,7 +879,7 @@ def find_library_base_addr(vuln_binary, library_path):
 
 def find_buffer_addr(vuln_binary, payload_length, use_gdb):
     test_program_to_find_buf_addr()
-    if use_gdb == 1:
+    if use_gdb is True:
         with io.FileIO("find_buf.gdb", "w") as file:
             file.write("b main\nrun " + "A"*payload_length +"\np/x &buf[0]\n")
 
@@ -939,15 +939,21 @@ def compile_binary(libraries):
 #------------main program changes-----------------
 if __name__ == '__main__':
 
+    if_use_gdb = False
+
     parser = argparse.ArgumentParser('ROP-Chain-Compiler')
     #parser.add_argument("vuln_bin", type=str, help="Path to vulnerable binary (ROP tester)")
     vuln_bin = 'vuln' 
-    parser.add_argument("lib", type=str, help="Libraries which are linked in vulnerable binary")
+    parser.add_argument("-lib", type=str, help="Libraries which are linked in vulnerable binary")
     parser.add_argument("-p", action='store_true', help="Print all gadgets") 
     args = parser.parse_args()
     
     lib_list = []
-    libraries = args.lib.split(' ')
+    libraries = []
+    if args.lib is not None:
+        libraries = args.lib.split(' ')
+    else:
+        libraries.append("/lib/i386-linux-gnu/libc.so.6")
 
     compile_binary(libraries)
 
@@ -965,17 +971,21 @@ if __name__ == '__main__':
     
     rop_payload = ""
 
-    if (len(libraries) == 1) and (libraries[0].count("libc") == 1):
-        buffer_address = find_buffer_addr(vuln_bin, 392, 0)
+    if args.lib is None:
+        buffer_address = find_buffer_addr(vuln_bin, 392, if_use_gdb)
         rop_payload = build_rop_chain_libc(lib_list, buffer_address)
+
+    elif (len(libraries) == 1) and (libraries[0].count("libc") == 1):
+        buffer_address = find_buffer_addr(vuln_bin, 440, if_use_gdb)
+        rop_payload = build_rop_chain_libc_syscalls(lib_list, buffer_address)
+
     else:
-        buffer_address = find_buffer_addr(vuln_bin, 416, 0)
+        buffer_address = find_buffer_addr(vuln_bin, 416, if_use_gdb)
         rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address)
 
-    rm_command = "rm -rf ./vuln2 ./vuln2.c"
-    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
-    rmproc.wait()
-    #build_rop_chain_libc_syscalls(lib_list, buf_address)
+    #rm_command = "rm -rf ./vuln2 ./vuln2.c"
+    #rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    #rmproc.wait()
 
     print_rop_payload(rop_payload)
 
