@@ -329,9 +329,9 @@ def gfind_pop_edx(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["pop", "edx"], ["ret"]]:
+        if ilist == [["pop", "edx"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["mov", "edx, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+        if ilist == [["mov", "edx, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
     print "gfind_pop_edx - 0"
@@ -344,11 +344,11 @@ def gfind_inc_edx(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["inc", "edx"], ["ret"]]:
+        if ilist == [["inc", "edx"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["add", "edx, 1"], ["ret"]]:
+        if ilist == [["add", "edx, 1"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["sub", "edx, 0xffffffff"], ["ret"]]:
+        if ilist == [["sub", "edx, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
     print "gfind_inc_edx - 0"
     return 0
@@ -360,9 +360,9 @@ def gfind_pop_ebx(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["pop", "ebx"], ["ret"]]:
+        if ilist == [["pop", "ebx"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["mov", "ebx, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+        if ilist == [["mov", "ebx, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
     print "gfind_pop_ebx - 0"
@@ -375,11 +375,11 @@ def gfind_dec_ebx(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["dec", "ebx"], ["ret"]]:
+        if ilist == [["dec", "ebx"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["sub", "ebx, 1"], ["ret"]]:
+        if ilist == [["sub", "ebx, 1"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["add", "ebx, 0xffffffff"], ["ret"]]:
+        if ilist == [["add", "ebx, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
     print "gfind_dec_ebx - 0"
     return 0
@@ -391,9 +391,9 @@ def gfind_pop_esi(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["pop", "esi"], ["ret"]]:
+        if ilist == [["pop", "esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["mov", "esi, dword ptr [esp]"], ["add", "esp, 4"], ["ret"]]:
+        if ilist == [["mov", "esi, dword ptr [esp]"], ["add", "esp, 4"], ["ret", ""]]:
             return gadget_addr
 
     print "gfind_pop_esi - 0"
@@ -406,13 +406,13 @@ def gfind_inc_esi(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["inc", "esi"], ["ret"]]:
+        if ilist == [["inc", "esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["inc", "esi"], ["add", "al, 0x83"], ["ret"]]:
+        if ilist == [["inc", "esi"], ["add", "al, 0x83"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["add", "esi, 1"], ["ret"]]:
+        if ilist == [["add", "esi, 1"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["sub", "esi, 0xffffffff"], ["ret"]]:
+        if ilist == [["sub", "esi, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
     print "gfind_inc_esi - 0"
     return 0
@@ -424,11 +424,11 @@ def gfind_dec_esi(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["dec", "esi"], ["ret"]]:
+        if ilist == [["dec", "esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["sub", "esi, 1"], ["ret"]]:
+        if ilist == [["sub", "esi, 1"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["add", "esi, 0xffffffff"], ["ret"]]:
+        if ilist == [["add", "esi, 0xffffffff"], ["ret", ""]]:
             return gadget_addr
     print "gfind_dec_esi - 0"
     return 0
@@ -440,9 +440,9 @@ def gfind_double_esi(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["add", "esi, esi"], ["ret"]]:
+        if ilist == [["add", "esi, esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["shl", "esi, 1"], ["ret"]]:
+        if ilist == [["shl", "esi, 1"], ["ret", ""]]:
             return gadget_addr
     print "gfind_double_esi - 0"
     return 0
@@ -454,11 +454,11 @@ def gfind_mov_eax_esi(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["mov", "eax, esi"], ["ret"]]:
+        if ilist == [["mov", "eax, esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "eax, esi"], ["ret"]]:
+        if ilist == [["xchg", "eax, esi"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "esi, eax"], ["ret"]]:
+        if ilist == [["xchg", "esi, eax"], ["ret", ""]]:
             return gadget_addr
     print "gfind_mov_eax_esi - 0"
     return 0
@@ -470,15 +470,15 @@ def gfind_mov_ecx_eax(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["mov", "ecx, eax"], ["ret"]]:
+        if ilist == [["mov", "ecx, eax"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "ecx, eax"], ["ret"]]:
+        if ilist == [["xchg", "ecx, eax"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "eax, ecx"], ["ret"]]:
+        if ilist == [["xchg", "eax, ecx"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "eax, ecx"], ["and", "al, 0x5b"], ["ret"]]:
+        if ilist == [["xchg", "eax, ecx"], ["and", "al, 0x5b"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["xchg", "ecx, eax"], ["and", "al, 0x5b"], ["ret"]]:
+        if ilist == [["xchg", "ecx, eax"], ["and", "al, 0x5b"], ["ret", ""]]:
             return gadget_addr
     print "gfind_mov_ecx_eax - 0"
     return 0
@@ -490,9 +490,9 @@ def gfind_syscall(gadgetMap):
         for instr in instr_list:
             ilist.append([instr.mnemonic, instr.op_str])
 
-        if ilist == [["int", "0x80"], ["ret"]]:
+        if ilist == [["int", "0x80"], ["ret", ""]]:
             return gadget_addr
-        if ilist == [["call", "dword ptr gs:[0x10]"], ["ret"]]:
+        if ilist == [["call", "dword ptr gs:[0x10]"], ["ret", ""]]:
             return gadget_addr
     print "gfind_syscall - 0"
     return 0
