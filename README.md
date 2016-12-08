@@ -4,7 +4,7 @@
 									Krishnan V - <SBU ID>
 									Neeraj Dixit - 109951838
 
-Introduction:
+Introduction
 -------------
 - The program consists of python code file 'rop-generator.py' and a README
 - The program builds a ROP chain which would make the stack executable in a
@@ -13,7 +13,7 @@ Introduction:
   ret2libc
 - The program options can be seen by the command 'python rop-generator.py -h'
 
-Tools/softwares:
+Tools/softwares
 ----------------
 1) Pyelf
 	- It is a python library for parsing and analyzing ELF files
@@ -25,7 +25,7 @@ Tools/softwares:
 	- It is a multi-architecture disassembly framework
 	- We used this framework to get the binary instructions in the text section
 
-Approach:
+Approach
 ---------
 - The aim of the ROP chain is to execute the 'mprotect' system call
 - The address range on the stack is given as input address and read, write
@@ -33,7 +33,7 @@ Approach:
 - The payload in the buffer is also given a sample shell code which spawns a
   shell process (/bin/bash, /bin/sh)
 
-Finding ROP Gadgets:
+Finding ROP Gadgets
 --------------------
 - Gadgets are any sequence of instructions which end with a 'ret'
   (or opcode 'c3')
@@ -48,10 +48,10 @@ Finding ROP Gadgets:
 - These gadgets are later picked up by ROP chain algorithm to assemble on the
   stack
 
-ROP Payload:
+ROP Payload
 ------------
 
-References:
+References
 ----------
 http://www.capstone-engine.org/lang_python.html
 http://stackoverflow.com/questions/24997541/getting-the-memory-layout-out-of-an-avrelf-file-by-useing-python-pyelftools
