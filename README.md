@@ -9,8 +9,6 @@ Introduction
 - The program consists of python code file 'rop-generator.py' and a README
 - The program builds a ROP chain which would make the stack executable in a
   binary
-- This would help us achieve traditional exploits like buffer overflow and
-  ret2libc
 - The program options can be seen by the command 'python rop-generator.py -h'
 
 Tools/softwares
