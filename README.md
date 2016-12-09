@@ -10,7 +10,7 @@ Introduction
   binary and then execute a secondary shellcode to invoke /bin/sh
 - The program options can be seen by the command 'python rop-generator.py -h'
 
-usage: python rop-generator.py [-h] [-lib LIB] [-t]
+  usage: python rop-generator.py [-h] [-lib LIB] [-t]
 
 - lib is used to specify one or more libraries to extract gadgets from.
 - t option is used to specify whether to run the payload in a test vulnerable program.
@@ -34,6 +34,8 @@ Approach
 - The aim of the ROP chain is to execute the 'mprotect' system call
 - mprotect takes three arguments - the page aligned address, length of the memory whose
   permission needs to be changed and, the permissions (7 for read + write + execute)
+- Stack frame layout is as follows:
+  | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
 - The page aligned address has null (0x00) as its first byte (in little endian notation).
   Also, the length and permissions have null bytes in them as well.
   The gadgets we find overcomes the NULL byte restrictions and execute mprotect.
@@ -41,13 +43,10 @@ Approach
   a) Put the arguments on the stack replacing the null bytes with some other byte (say 0xff).
      Chain a series of strcpy functions and their arguments to replace these dummy bytes with
      null at runtime. The source null byte for strcpy is obtained from the '.rodata' section.
-     Once all the null bytes are inserted at the appropriate locations, invoke mprotect libc
-     function. This method assumes the presence of libc.
-  b) This second approach does not make use of any libc functions. It involves finding the
-     necessary gadgets to invoke the mprotect system call. The syscall number (0x7d) must
-     be put in the register eax, the page aligned address in ebx, length in ecx and the
-     permissions in edx. Once this is accomplished, we need to invoke the system call using
-     int 0x80 or call dword ptr gs:[0x10]
+  b) Insert syscall number (0x7d) must be put in the register eax, the page aligned address in
+     ebx, length in ecx and the permissions in edx. We invoke the system call using int 0x80 or
+     call dword ptr gs:[0x10]
+- We use the above mentioned approaches using 4 stack frame layouts (mentioned in 'ROP Payload')
 - The payload in the buffer is also given a sample shell code which spawns a
   shell process (/bin/bash, /bin/sh)
 
@@ -68,24 +67,21 @@ Finding ROP Gadgets
 
 ROP Payload
 ------------
-We came up with three stack frame layouts to invoke mprotect :
+We came up with 4 stack frame layouts to invoke mprotect :
 
-1) Using strcpy and the mprotect libc functions.
-- Note that, in our code, we use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
+1) strcpy and the mprotect in libc
+- We use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
   with the processor specific _strcpy_sse2()
 - We first scan the sybol table (.dynsym) in libc to get the addresses of mprotect and _strcpy_g().
-- The stack looks like this :
-  | &strcpy | <addr_of_pop_pop_ret_gadget> | <dest_byte_to_be_replaced_with_null> | <source_of_null_in_rodata>
-- We chain 7 such calls to strcpy because there will be 7 dummy bytes in total that needs to be replaced with null.
-  1 in the page aligned address, 3 in the length, and 3 in the permissions.  Its stack frame looks like this:
-  | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
+- We replace all the NULL bytes in payload by using _strcpy_
 - This ROP payload is easy to build as it just requires 2 gadgets but it assumes the presence of libc
 
-2) Putting the required arguments in registers and invoking the mprotect syscall. This method relies on specific gadgets in
-   libc.
+2) mprotect syscall (without strcpy)
+- 
 3) This is another stack frame layout which also invokes the mprotect syscall, which relies on instructions, some of which be found.
 
 References
 ----------
 http://www.capstone-engine.org/lang_python.html
+
 http://stackoverflow.com/questions/24997541/getting-the-memory-layout-out-of-an-avrelf-file-by-useing-python-pyelftools
