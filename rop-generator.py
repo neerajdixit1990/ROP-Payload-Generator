@@ -817,10 +817,10 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
 def build_rop_chain_libc(lib_list, buf_address):
     result = True
-    libc_base_address = lib_list[0][1]
-    f = open(lib_list[0][2], 'rb')
+    libc_base_address = 0xb7e05000 #lib_list[0][1]
+    f = open('/lib/i386-linux-gnu/libc.so.6', 'rb')
     if f == None:
-        print lib_list[0][2] + "library not found !"
+        print "/lib/i386-linux-gnu/libc.so.6 library not found !"
         exit(2)
     elffile = ELFFile(f)
 
