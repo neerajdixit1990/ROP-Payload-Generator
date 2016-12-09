@@ -1,0 +1,7 @@
+python rop-generator.py -t "/usr/lib/libgs.so.9 /lib/ld-linux.so.2 /usr/lib/libmozjs185.so.1.0.0 /lib/i386-linux-gnu/libslang.so.2.3.0"
+
+
+python rop-generator.py -t "/usr/lib/libgs.so.9 /lib/ld-linux.so.2 /lib/i386-linux-gnu/liblvm2cmd.so.2.02"
+
+
+python rop-generator.py -t "/usr/lib/libgs.so.9 /lib/ld-linux.so.2 /lib/i386-linux-gnu/libdns-export.so.162.1.3"
