@@ -693,7 +693,7 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         print '\tUnable to find gadget and eax, 0x1000; ret;'
         result = False
     else:
-        print '\t[0x%x]\tand  eax, 0x1000; ret\t\t%s' %(lib_name)
+        print '\t[0x%x]\tand  eax, 0x1000; ret\t\t%s' %(temp, lib_name)
     and_eax_x1000_addr = pack_value(temp) 
     rop_payload += and_eax_x1000_addr
     #print 'Address of and eax, 0x1000; ret = 0x%x' %(temp)
@@ -737,7 +737,7 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         print '\tUnable to find gadget for xchg eax, ebx; ret;'
         result = False
     else:
-        print '\t[0x%x]\txchg  eax, ebx; ret\t\t%s' %(lib_name)
+        print '\t[0x%x]\txchg  eax, ebx; ret\t\t%s' %(temp, lib_name)
     xchg_eax_ebx_addr = pack_value(temp)
     rop_payload += xchg_eax_ebx_addr
     #print 'Address of xchg eax, ebx; ret = 0x%x' %(temp)
