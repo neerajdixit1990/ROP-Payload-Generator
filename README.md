@@ -15,9 +15,9 @@ usage: python rop-generator.py [-h] [-lib LIB] [-t]
 
 -lib is used to specify one or more libraries to extract gadgets from.
 -t option is used to specify whether to run the payload in a test vulnerable program.
-If -t is not specified, all the found gadgets will be printed. Otherwise, the rop payload will be
-run in a test program which will first make the stack executable and then execute a shellcode
-to invoke /bin/sh.
+If -t is not specified, all the found gadgets will be printed. 
+Otherwise, the rop payload will be run in a test program which will first make the stack 
+executable and then execute a secondary shellcode to invoke /bin/sh.
 
 Tools/softwares
 ----------------
@@ -27,15 +27,29 @@ Tools/softwares
 	  libraries
 	- We used read the '.text' section and '.rodata' in binary files
 	- The code of the binary lies in '.text', '.init', '.plt' & '.fini' section
+	 and those of libraries lie in the '.text' section.
 2) Capstone
 	- It is a multi-architecture disassembly framework
-	- We used this framework to get the binary instructions in the text section
+	- We used this framework to disassemble the bytes in the text section
 
 Approach
 ---------
 - The aim of the ROP chain is to execute the 'mprotect' system call
-- The address range on the stack is given as input address and read, write
-  & execute permissions (i.e stack is made executable)
+- mprotect takes three arguments - the page aligned address, length of the memory whose
+  permission needs to be changed and, the permissions (7 for read + write + execute)
+  The page aligned address has null (0x00) as its first byte (in little endian notation).
+  Also, the length and permissions have null bytes in them as well.
+  The gadgets we find overcomes the nul byte restrictions and manages to execute mprotect.
+- We have two approaches to do this :
+  a) Put the arguments on the stack replacing the null bytes with some other byte (say 0xff).
+     Chain a series of strcpy functions and their arguments to replace these dummy bytes with
+     null at runtime. The source null byte for strcpy is obtained from the '.rodata' section.
+     Once all the null bytes are inserted at the appropriate locations, invoke mprotect libc
+     function. This method assumes the presence of libc.
+  b) This second approach does not make use of any libc functions. It involves finding the
+     necessary gadgets to invoke the mprotect system call. The syscall number (0x7d) must
+     be put in the register eax, the page aligned address in ebx, length in ecx and the
+     permissions in edx.
 - The payload in the buffer is also given a sample shell code which spawns a
   shell process (/bin/bash, /bin/sh)
 
