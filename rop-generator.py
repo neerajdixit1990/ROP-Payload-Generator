@@ -830,7 +830,9 @@ def find_libc_path(vuln_binary):
 def build_rop_chain_libc(lib_list, buf_address):
     result = True
     libc_path = find_libc_path("vuln")
+
     libc_base_address = find_library_base_addr("vuln", libc_path)
+
     f = open(libc_path, 'rb')
     if f == None:
         print libc_path + " library not found !"
@@ -959,6 +961,7 @@ def get_binary_instr(filename, print_gad):
 def find_library_base_addr(vuln_binary, library_path):
     with io.FileIO("test.gdb", "w") as file:
         file.write("b main\nrun hello\ninfo proc mappings\n")
+        file.close()
 
     cmd = "gdb --batch --command=./test.gdb --args "
     cmd = cmd + vuln_binary
@@ -996,6 +999,7 @@ def test_program_to_find_buf_addr():
     program = "#include <stdio.h>\n#include <string.h>\n#include <stdlib.h>\n\nint main(int argc, char *argv[])\n{\n\tchar buf[256];\n\tstrcpy(buf, argv[1]);\n\tprintf(\"Address of buf = %p\\n\", &buf[0]);\n\tprintf(\"Input: %s\\n\", buf);\n\texit(1);\n\treturn 0;\n}\n"
     with io.FileIO("vuln2.c", "w") as file:
         file.write(program)
+        file.close()
     rm_command = "rm -rf ./vuln2"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
     rmproc.wait()
@@ -1008,9 +1012,10 @@ def write_vulnerable_program():
     program = "#include <stdio.h>\n#include <string.h>\n\nint main(int argc, char *argv[])\n{\n\tchar buf[256];\n\tstrcpy(buf, argv[1]);\n\tprintf(\"Input: %s\\n\", buf);\n\treturn 0;\n}\n"
     with io.FileIO("vuln.c", "w") as file:
         file.write(program)
+        file.close()
 
 def compile_binary(libraries):
-    rm_command = "rm -rf ./vuln"
+    rm_command = "rm -rf ./vuln ./vuln.c"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
     rmproc.wait()
     write_vulnerable_program()
@@ -1082,9 +1087,9 @@ if __name__ == '__main__':
             print '===============================================================\n'
 
 
-    #rm_command = "rm -rf ./vuln2 ./vuln2.c"
-    #rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
-    #rmproc.wait()
+    rm_command = "rm -rf ./vuln2 ./vuln2.c"
+    rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
+    rmproc.wait()
 
     if result == True: 
         print_rop_payload(rop_payload)
