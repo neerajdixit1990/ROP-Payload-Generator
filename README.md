@@ -84,6 +84,7 @@ We came up with three stack frame layouts to invoke mprotect :
    need to call mprotect. Its stack frame looks like this :
    | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx>
    
+   
 
 References
 ----------
