@@ -34,8 +34,7 @@ Approach
 - The aim of the ROP chain is to execute the 'mprotect' system call
 - mprotect takes three arguments - the page aligned address, length of the memory whose
   permission needs to be changed and, the permissions (7 for read + write + execute)
-- Stack frame layout is as follows:
-| &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
+  | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
 - The page aligned address has null (0x00) as its first byte (in little endian notation).
   Also, the length and permissions have null bytes in them as well.
   The gadgets we find overcomes the NULL byte restrictions and execute mprotect.
