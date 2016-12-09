@@ -82,9 +82,11 @@ We came up with three stack frame layouts to invoke mprotect :
    We chain 7 such calls to strcpy because there will be 7 dummy bytes in total that needs to be replaced with null.
    1 in the page aligned address, 3 in the length, and 3 in the permissions. After the above chain is finished, we
    need to call mprotect. Its stack frame looks like this :
-   | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx>
-   
-   
+   | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
+
+2) Putting the required arguments in registers and invoking the mprotect syscall. This method relies on specific gadgets in
+   libc.
+3) This is another stack frame layout which also invokes the mprotect syscall, which relies on instructions, some of which be found.
 
 References
 ----------
