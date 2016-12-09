@@ -68,7 +68,6 @@ Finding ROP Gadgets
 ROP Payload
 ------------
 We came up with 4 stack frame layouts to invoke mprotect :
-
 1) strcpy and the mprotect in libc
 - We use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
   with the processor specific _strcpy_sse2()
@@ -76,9 +75,10 @@ We came up with 4 stack frame layouts to invoke mprotect :
 - We replace all the NULL bytes in payload by using _strcpy_
 - This ROP payload is easy to build as it just requires 2 gadgets but it assumes the presence of libc
 
-2) mprotect syscall (without strcpy)
-- 
-3) This is another stack frame layout which also invokes the mprotect syscall, which relies on instructions, some of which be found.
+2) mprotect syscall (without strcpy, no dependency on libc)
+- All the remaining 3 stack frame layouts do not rely on libc to find gadgets
+- They use different combinations of registers to execute the mprotect syscall
+- Stack frame layout for each of them is printed as the code executes
 
 References
 ----------
