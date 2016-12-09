@@ -30,6 +30,8 @@ Tools/softwares
 - It is a multi-architecture disassembly framework
 - We used this framework to disassemble the bytes in the text section
 
+Note: This tool is developed and tested on 4.6.0-kali1-686-pae (32 bit machine)
+
 Approach
 ---------
 - The aim of the ROP chain is to execute the 'mprotect' system call
