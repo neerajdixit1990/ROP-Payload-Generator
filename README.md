@@ -83,6 +83,7 @@ We came up with three stack frame layouts to invoke mprotect :
    1 in the page aligned address, 3 in the length, and 3 in the permissions. After the above chain is finished, we
    need to call mprotect. Its stack frame looks like this :
    | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx>
+   
 
 References
 ----------
