@@ -6,10 +6,18 @@
 
 Introduction
 -------------
-- The program consists of python code file 'rop-generator.py' and a README
+- The submission consists of a python code file 'rop-generator.py' and a README
 - The program builds a ROP chain which would make the stack executable in a
   binary
 - The program options can be seen by the command 'python rop-generator.py -h'
+
+usage: python rop-generator.py [-h] [-lib LIB] [-t]
+
+-lib is used to specify one or more libraries to extract gadgets from.
+-t option is used to specify whether to run the payload in a test vulnerable program.
+If -t is not specified, all the found gadgets will be printed. Otherwise, the rop payload will be
+run in a test program which will first make the stack executable and then execute a shellcode
+to invoke /bin/sh.
 
 Tools/softwares
 ----------------
