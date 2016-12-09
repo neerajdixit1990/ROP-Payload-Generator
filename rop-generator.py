@@ -1397,7 +1397,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('python rop-generator.py')
     vuln_bin = 'vuln' 
-    parser.add_argument("lib", type=str, help="Libraries to search for gadgets - default is libc")
+    parser.add_argument("lib", type=str, help="Libraries to search for gadgets. Multiple libraries should be in quotes.")
     parser.add_argument("-t", action='store_true', help="Use program as ROP tester") 
     args = parser.parse_args()
     
