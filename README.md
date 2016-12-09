@@ -49,21 +49,22 @@ Approach
   b) This second approach does not make use of any libc functions. It involves finding the
      necessary gadgets to invoke the mprotect system call. The syscall number (0x7d) must
      be put in the register eax, the page aligned address in ebx, length in ecx and the
-     permissions in edx.
+     permissions in edx. Once this is accomplished, we need to invoke the system call using
+     int 0x80 or call dword ptr gs:[0x10]
 - The payload in the buffer is also given a sample shell code which spawns a
   shell process (/bin/bash, /bin/sh)
 
 Finding ROP Gadgets
 --------------------
 - Gadgets are any sequence of instructions which end with a 'ret'
-  (or opcode 'c3')
-- Capstone disassembler does NOT account for unaligned gadgets if we pass the
-  address of '.text' section directly
-- To solve this issue we partition the raw bytes of .text section with 'c3'
-  delimiter
+  (or the byte 'c3')
+- Capstone disassembler does not account for unaligned gadgets if we disassemble 
+  the entire '.text' section directly.
+- To solve this issue, we partition the raw bytes of .text section with 'c3'
+  as delimiter
 - This way we divide the binary instructions into sections between 2 rets
 - We consider only 10 bytes before the ending ret to find out gadgets as
-  higher depth consume more time for finding gadgets in large binaries
+  higher depth consume more time for finding gadgets in large libraries
   (like libc)
 - These gadgets are later picked up by ROP chain algorithm to assemble on the
   stack
