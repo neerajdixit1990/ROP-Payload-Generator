@@ -1381,8 +1381,13 @@ def compile_binary(libraries):
         lib_path = os.path.realpath(lib)
         linker_flags += " -L" + os.path.dirname(lib_path) + " -l:" + os.path.basename(lib_path)
     compile_command += linker_flags + " vuln.c"
+    print "Compiling vuln.c"
+    print compile_command
     proc = subprocess.Popen(compile_command, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
+    status = proc.wait()
+    if status != 0:
+        return False
+    return True
 
 #------------main program changes-----------------
 if __name__ == '__main__':
@@ -1395,7 +1400,11 @@ if __name__ == '__main__':
     
     lib_list = []
     libraries = args.lib.split(' ')
-    compile_binary(libraries)
+    build_success = compile_binary(libraries)
+
+    if build_success is False:
+        print "Unable to link the given set of libraries with vuln.c"
+        exit(1)
 
     for entry in libraries:
         disas_map = get_binary_instr(entry, not args.t)
