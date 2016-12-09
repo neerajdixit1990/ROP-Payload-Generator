@@ -68,6 +68,7 @@ Finding ROP Gadgets
 ROP Payload
 ------------
 We came up with 4 stack frame layouts to invoke mprotect :
+
 1) strcpy and the mprotect in libc
 - We use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
   with the processor specific _strcpy_sse2()
