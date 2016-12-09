@@ -657,7 +657,7 @@ def build_rop_chain_syscall_generic2(lib_list, buf_address):
             print '\tUnable to find gadget for inc ecx; ret;'
             result = False
         else:
-            print '\t[0x%x]\tinc ecx; ret\t\t%s' %(gadget6, lib_name)
+            print '\t[0x%x]\tinc ecx; ret\t\t%s' %(gadget5, lib_name)
         generic_gadget_list.append(gadget5)
         i += 1
 
@@ -669,7 +669,7 @@ def build_rop_chain_syscall_generic2(lib_list, buf_address):
             print '\tUnable to find gadget for add ecx, ecx; ret;'
             result = False
         else:
-            print '\t[0x%x]\tadd ecx, ecx; ret\t\t%s' %(gadget7, lib_name)
+            print '\t[0x%x]\tadd ecx, ecx; ret\t\t%s' %(gadget6, lib_name)
         generic_gadget_list.append(gadget6)
         i += 1
 
@@ -715,7 +715,7 @@ def build_rop_chain_syscall_generic2(lib_list, buf_address):
             print '\tUnable to find gadget for add ecx, ecx; ret;'
             result = False
         else:
-            print '\t[0x%x]\tadd ecx, ecx; ret\t\t%s' %(gadget7, lib_name)
+            print '\t[0x%x]\tadd ecx, ecx; ret\t\t%s' %(gadget6, lib_name)
         generic_gadget_list.append(gadget6)
         i += 1
 
@@ -1323,7 +1323,10 @@ def find_library_base_addr(vuln_binary, library_path):
     cmd = cmd + vuln_binary
     cmd = cmd + " hello|grep " + os.path.realpath(library_path) + "|head -1|awk '{print $1}'"
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
+    status = proc.wait()
+    if status != 0:
+        print "Error finding library base address %s" %(str(e))
+        return 0
     try:
         library_base_addr = int(proc.stdout.read(), 16)
     except Exception as e:
