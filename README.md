@@ -1,45 +1,42 @@
-                  # ROP-Payload-Generator
 
-										ROP Chain Compiler
-									Krishnan V - 110284307
-									Neeraj Dixit - 109951838
+						ROP Chain Compiler
+						Krishnan V - 110284307
+						Neeraj Dixit - 109951838
 
 Introduction
 -------------
 - The submission consists of a python code file 'rop-generator.py' and a README
 - The program builds a ROP chain which would make the stack executable in a
-  binary
+  binary and then execute a secondary shellcode to invoke /bin/sh
 - The program options can be seen by the command 'python rop-generator.py -h'
 
 usage: python rop-generator.py [-h] [-lib LIB] [-t]
 
--lib is used to specify one or more libraries to extract gadgets from.
--t option is used to specify whether to run the payload in a test vulnerable program.
-If -t is not specified, all the found gadgets will be printed. 
-Otherwise, the rop payload will be run in a test program which will first make the stack 
-executable and then execute a secondary shellcode to invoke /bin/sh.
+- lib is used to specify one or more libraries to extract gadgets from.
+- t option is used to specify whether to run the payload in a test vulnerable program.
+- If -t is not specified, all the found gadgets will be printed. 
 
 Tools/softwares
 ----------------
 1) Pyelf
-	- It is a python library for parsing and analyzing ELF files
-	- We used this library to read the code sections of binary files and
-	  libraries
-	- We used read the '.text' section and '.rodata' in binary files
-	- The code of the binary lies in '.text', '.init', '.plt' & '.fini' section
-	 and those of libraries lie in the '.text' section.
+- It is a python library for parsing and analyzing ELF files
+- We used this library to read the code sections of binary files and
+  libraries
+- We used read the '.text' section and '.rodata' in binary files
+- The code of the binary lies in '.text', '.init', '.plt' & '.fini' section
+ and those of libraries lie in the '.text' section.
 2) Capstone
-	- It is a multi-architecture disassembly framework
-	- We used this framework to disassemble the bytes in the text section
+- It is a multi-architecture disassembly framework
+- We used this framework to disassemble the bytes in the text section
 
 Approach
 ---------
 - The aim of the ROP chain is to execute the 'mprotect' system call
 - mprotect takes three arguments - the page aligned address, length of the memory whose
   permission needs to be changed and, the permissions (7 for read + write + execute)
-  The page aligned address has null (0x00) as its first byte (in little endian notation).
+- The page aligned address has null (0x00) as its first byte (in little endian notation).
   Also, the length and permissions have null bytes in them as well.
-  The gadgets we find overcomes the nul byte restrictions and manages to execute mprotect.
+  The gadgets we find overcomes the NULL byte restrictions and execute mprotect.
 - We have two approaches to do this :
   a) Put the arguments on the stack replacing the null bytes with some other byte (say 0xff).
      Chain a series of strcpy functions and their arguments to replace these dummy bytes with
@@ -74,15 +71,15 @@ ROP Payload
 We came up with three stack frame layouts to invoke mprotect :
 
 1) Using strcpy and the mprotect libc functions.
-   Note that, in our code, we use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
-   with the processor specific _strcpy_sse2() and its location cannot be found in the symbol table
-   We first scan the sybol table (.dynsym) in libc to get the addresses of mprotect and _strcpy_g().
-   The stack looks like this :
-   | &strcpy | <addr_of_pop_pop_ret_gadget> | <dest_byte_to_be_replaced_with_null> | <source_of_null_in_rodata> |
-   We chain 7 such calls to strcpy because there will be 7 dummy bytes in total that needs to be replaced with null.
-   1 in the page aligned address, 3 in the length, and 3 in the permissions. After the above chain is finished, we
-   need to call mprotect. Its stack frame looks like this :
-   | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
+- Note that, in our code, we use _strcpy_g instead of the regular strcpy as otherwise, it will be replaced 
+  with the processor specific _strcpy_sse2()
+- We first scan the sybol table (.dynsym) in libc to get the addresses of mprotect and _strcpy_g().
+- The stack looks like this :
+  | &strcpy | <addr_of_pop_pop_ret_gadget> | <dest_byte_to_be_replaced_with_null> | <source_of_null_in_rodata>
+- We chain 7 such calls to strcpy because there will be 7 dummy bytes in total that needs to be replaced with null.
+  1 in the page aligned address, 3 in the length, and 3 in the permissions.  Its stack frame looks like this:
+  | &mprotect | <addr_of_pop_pop_pop_ret_gadget> | <page_aligned_addr> | <length> | <permissions_rwx> | <addr_of_shellcode>
+- This ROP payload is easy to build as it just requires 2 gadgets but it assumes the presence of libc
 
 2) Putting the required arguments in registers and invoking the mprotect syscall. This method relies on specific gadgets in
    libc.
